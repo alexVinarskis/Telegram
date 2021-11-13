@@ -22,6 +22,8 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
+import com.google.android.exoplayer2.util.Log;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.LocaleController;
@@ -43,6 +45,7 @@ import org.telegram.ui.Cells.LoadingCell;
 import org.telegram.ui.Cells.RadioButtonCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
+import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.EditTextBoldCursor;
@@ -76,12 +79,16 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
     private LinkActionView permanentLinkView;
     private TextCell manageLinksTextView;
     private TextInfoPrivacyCell manageLinksInfoCell;
+    private HeaderCell headerCell3;                         // alex dev
+    private TextCheckCell manageRestrictionsSwitch;         // alex dev
+    private TextInfoPrivacyCell manageRestrictionsInfo;     // alex dev
     private ShadowSectionCell sectionCell2;
     private TextInfoPrivacyCell infoCell;
     private TextSettingsCell textCell;
     private TextSettingsCell textCell2;
 
     private boolean isPrivate;
+    private boolean isRestricted;
 
     private TLRPC.Chat currentChat;
     private TLRPC.ChatFull info;
@@ -133,6 +140,9 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         }
         isPrivate = !isForcePublic && TextUtils.isEmpty(currentChat.username);
         isChannel = ChatObject.isChannel(currentChat) && !currentChat.megagroup;
+        // dev alex ToDo: fix read from API
+        isRestricted = currentChat.noforwards;
+
         if (isForcePublic && TextUtils.isEmpty(currentChat.username) || isPrivate && currentChat.creator) {
             TLRPC.TL_channels_checkUsername req = new TLRPC.TL_channels_checkUsername();
             req.username = "1";
@@ -385,7 +395,6 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         adminedInfoCell = new ShadowSectionCell(context);
         linearLayout.addView(adminedInfoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-
         manageLinksTextView = new TextCell(context);
         manageLinksTextView.setBackgroundDrawable(Theme.getSelectorDrawable(true));
         manageLinksTextView.setTextAndIcon(LocaleController.getString("ManageInviteLinks", R.string.ManageInviteLinks), R.drawable.actions_link, false);
@@ -398,6 +407,25 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
 
         manageLinksInfoCell = new TextInfoPrivacyCell(context);
         linearLayout.addView(manageLinksInfoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        // dev alex
+        // add white title separator
+        headerCell3 = new HeaderCell(context, 23);
+        headerCell3.setHeight(46);
+        headerCell3.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+        linearLayout.addView(headerCell3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        // add toggle switch
+        manageRestrictionsSwitch = new TextCheckCell(context);
+        manageRestrictionsSwitch.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+        manageRestrictionsSwitch.setDrawCheckRipple(true);
+        manageRestrictionsSwitch.setOnClickListener(v -> {
+            toggleRestrictSaving(!manageRestrictionsSwitch.isChecked());
+        });
+        linearLayout.addView(manageRestrictionsSwitch, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        toggleRestrictSaving(isRestricted);
+        // add bottom gray text
+        manageRestrictionsInfo = new TextInfoPrivacyCell(context);
+        linearLayout.addView(manageRestrictionsInfo, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         if (!isPrivate && currentChat.username != null) {
             ignoreTextChanges = true;
@@ -472,6 +500,24 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             }
         }
         return true;
+    }
+
+    // dev alex toggle
+    private void toggleRestrictSaving(boolean newValue) {
+        manageRestrictionsSwitch.setChecked(newValue);
+        // Skip if didn't change
+        if (newValue != isRestricted) {
+            isRestricted = newValue;
+            // push to API
+            TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
+            req.peer = getMessagesController().getInputPeer(-chatId);
+            req.enabled = isRestricted;
+            getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                if (response != null) Log.e("DB", "response from resetting restricted: " + response.toString());
+                if (error != null ) Log.e("DB", "error from resetting restricted: " + error.text);
+                Log.e("DB", String.valueOf(getMessagesController().getChatFull(chatId).flags));
+            }));
+        }
     }
 
     private void loadAdminedChannels() {
@@ -585,10 +631,28 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             checkTextView.setVisibility(!isPrivate && checkTextView.length() != 0 ? View.VISIBLE : View.GONE);
             if (isPrivate) {
                 typeInfoCell.setBackgroundDrawable(Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
-                manageLinksInfoCell.setBackground(Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
+                manageLinksInfoCell.setBackground(Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
                 manageLinksInfoCell.setText(LocaleController.getString("ManageLinksInfoHelp", R.string.ManageLinksInfoHelp));
+                // dev alex
+                // set title
+                headerCell3.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                headerCell3.setVisibility(View.VISIBLE);
+                headerCell3.setText(LocaleController.getString("ManageRestrictionsTitle", R.string.ManageRestrictionsTitle));
+                // set switch view
+                manageRestrictionsSwitch.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                manageRestrictionsSwitch.setVisibility(View.VISIBLE);
+                manageRestrictionsSwitch.setTextAndCheck(LocaleController.getString("ManageRestrictionsSwitch", R.string.ManageRestrictionsSwitch),isRestricted, false);
+                // set explanation text
+                manageRestrictionsInfo.setVisibility(View.VISIBLE);
+                manageRestrictionsInfo.setText(LocaleController.getString("ManageRestrictionsInfo", R.string.ManageRestrictionsInfo));
+                manageRestrictionsInfo.setBackgroundDrawable(Theme.getThemedDrawable(manageRestrictionsInfo.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
             } else {
                 typeInfoCell.setBackgroundDrawable(checkTextView.getVisibility() == View.VISIBLE ? null : Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
+                // dev alex
+                manageLinksInfoCell.setBackground(Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
+                headerCell3.setVisibility(View.GONE);
+                manageRestrictionsSwitch.setVisibility(View.GONE);
+                manageRestrictionsInfo.setVisibility(View.GONE);
             }
         }
         radioButtonCell1.setChecked(!isPrivate, true);
@@ -769,6 +833,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         themeDescriptions.add(new ThemeDescription(linkContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
         themeDescriptions.add(new ThemeDescription(headerCell, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader));
         themeDescriptions.add(new ThemeDescription(headerCell2, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader));
+        themeDescriptions.add(new ThemeDescription(headerCell3, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader));
         themeDescriptions.add(new ThemeDescription(editText, ThemeDescription.FLAG_TEXTCOLOR, null, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
         themeDescriptions.add(new ThemeDescription(editText, ThemeDescription.FLAG_HINTTEXTCOLOR, null, null, null, null, Theme.key_windowBackgroundWhiteHintText));
 

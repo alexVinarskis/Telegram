@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- dev alex -->
+    <string name="ManageRestrictionsTitle">Saving content</string>
+    <string name="ManageRestrictionsSwitch">Restrict saving content</string>
+    <string name="ManageRestrictionsInfo">Participants won\'t be able to forward messages from this channel or save media files.</string>
+
     <string name="AppName">Telegram</string>
     <string name="AppNameBeta">Telegram Beta</string>
     <string name="LanguageName">English</string>
