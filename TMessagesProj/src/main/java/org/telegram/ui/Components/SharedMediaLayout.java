@@ -1458,7 +1458,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                         } else {
                             noForwardHint = LocaleController.getString("noForwardChatHint", R.string.noForwardChatHint);
                         }
-                        hint = new HintView(profileActivity.getParentActivity(), 8, parent.getResourceProvider());
+                        hint = new HintView(profileActivity.getParentActivity(), 9, parent.getResourceProvider());
                         hint.setAlpha(0.0f);
                         hint.setVisibility(View.INVISIBLE);
                         hint.setShowingDuration(2000);
