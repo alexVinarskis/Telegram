@@ -12367,52 +12367,74 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 hideActionMode();
                 updatePinnedMessageView(true);
             } else {
-                ActionBarMenuItem saveItem = actionBar.createActionMode().getItem(save_to);
-                ActionBarMenuItem copyItem = actionBar.createActionMode().getItem(copy);
                 ActionBarMenuItem starItem = actionBar.createActionMode().getItem(star);
                 ActionBarMenuItem editItem = actionBar.createActionMode().getItem(edit);
                 ActionBarMenuItem forwardItem = actionBar.createActionMode().getItem(forward);
-
-                if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
-                    forwardButtonAnimation = new AnimatorSet();
-                    ArrayList<Animator> animators = new ArrayList<>();
-                    if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0);
-                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
-                    }
-                    if (forwardButton != null) {
-                        forwardButton.setEnabled(cantForwardMessagesCount == 0);
-                        animators.add(ObjectAnimator.ofFloat(forwardButton, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
-                    }
-                    forwardButtonAnimation.playTogether(animators);
-                    forwardButtonAnimation.setDuration(100);
-                    forwardButtonAnimation.addListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            forwardButtonAnimation = null;
-                        }
-                    });
-                    forwardButtonAnimation.start();
+                ActionBarMenuItem saveItem = actionBar.createActionMode().getItem(save_to);
+                ActionBarMenuItem copyItem = actionBar.createActionMode().getItem(copy);
+                if (allowSharing()) {
+                    saveItem.setVisibility(View.VISIBLE);
+                    copyItem.setVisibility(View.VISIBLE);
+                    forwardItem.setVisibility(View.VISIBLE);
                 } else {
-                    if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0);
-                        forwardItem.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                    saveItem.setVisibility(View.GONE);
+                    copyItem.setVisibility(View.GONE);
+                    forwardItem.setVisibility(View.GONE);
+                    saveItem = null;
+                    copyItem = null;
+                    forwardItem = null;
+                }
+
+                if (allowSharing()) {
+                    forwardButton.setVisibility(View.VISIBLE);
+                    if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
+                        forwardButtonAnimation = new AnimatorSet();
+                        ArrayList<Animator> animators = new ArrayList<>();
+                        if (forwardItem != null) {
+                            forwardItem.setEnabled(cantForwardMessagesCount == 0);
+                            animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                        }
+                        if (forwardButton != null) {
+                            forwardButton.setEnabled(cantForwardMessagesCount == 0);
+                            animators.add(ObjectAnimator.ofFloat(forwardButton, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                        }
+                        forwardButtonAnimation.playTogether(animators);
+                        forwardButtonAnimation.setDuration(100);
+                        forwardButtonAnimation.addListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator animation) {
+                                forwardButtonAnimation = null;
+                            }
+                        });
+                        forwardButtonAnimation.start();
+                    } else {
+                        if (forwardItem != null) {
+                            forwardItem.setEnabled(cantForwardMessagesCount == 0);
+                            forwardItem.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                        }
+                        if (forwardButton != null && allowSharing()) {
+                            forwardButton.setEnabled(cantForwardMessagesCount == 0);
+                            forwardButton.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                        }
                     }
-                    if (forwardButton != null) {
-                        forwardButton.setEnabled(cantForwardMessagesCount == 0);
-                        forwardButton.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
-                    }
+                } else {
+                    forwardButton.setVisibility(View.GONE);
                 }
                 if (saveItem != null) {
                     saveItem.setVisibility(((canSaveMusicCount > 0 && canSaveDocumentsCount == 0) || (canSaveMusicCount == 0 && canSaveDocumentsCount > 0)) && cantSaveMessagesCount == 0 ? View.VISIBLE : View.GONE);
                     saveItem.setContentDescription(canSaveMusicCount > 0 ? LocaleController.getString("SaveToMusic", R.string.SaveToMusic) : LocaleController.getString("SaveToDownloads", R.string.SaveToDownloads));
                 }
 
-                int copyVisible = copyItem.getVisibility();
+                int copyVisible = View.GONE;
+                int newCopyVisible = View.GONE;
+                if (copyItem != null) {
+                    copyVisible = copyItem.getVisibility();
+                    copyItem.setVisibility(selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0 ? View.VISIBLE : View.GONE);
+                    newCopyVisible = copyItem.getVisibility();
+                }
+
                 int starVisible = starItem.getVisibility();
-                copyItem.setVisibility(selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0 ? View.VISIBLE : View.GONE);
                 starItem.setVisibility(getMediaDataController().canAddStickerToFavorites() && (selectedMessagesCanStarIds[0].size() + selectedMessagesCanStarIds[1].size()) == selectedCount ? View.VISIBLE : View.GONE);
-                int newCopyVisible = copyItem.getVisibility();
                 int newStarVisible = starItem.getVisibility();
                 actionBar.createActionMode().getItem(delete).setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
                 hasUnfavedSelected = false;
@@ -12511,7 +12533,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
 
                 if (editItem != null) {
-                    if (copyVisible != newCopyVisible || starVisible != newStarVisible) {
+                    if ((allowSharing() && copyVisible != newCopyVisible) || starVisible != newStarVisible) {
                         if (newEditVisibility == View.VISIBLE) {
                             editItem.setAlpha(1.0f);
                             editItem.setScaleX(1.0f);
@@ -20245,7 +20267,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     text.setText(LocaleController.getString("ForwardsRestrictedChatInfo", R.string.ForwardsRestrictedChatInfo));
                 }
                 popupFwdRestricted.addView(text);
-                scrimPopupContainerLayout.addView(popupFwdRestricted, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, showMessageSeen ? -8 : 0, 0, 0));
+                scrimPopupContainerLayout.addView(popupFwdRestricted, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, -8, 0, 0));
             }
             scrimPopupWindow = new ActionBarPopupWindow(scrimPopupContainerLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
                 @Override

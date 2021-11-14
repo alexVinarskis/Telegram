@@ -437,6 +437,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private ArrayList<SharedPhotoVideoCell2> animationSupportingSortedCells = new ArrayList<>();
     private int animateToColumnsCount;
 
+    // dev alex
+    private HintView hint = null;
+
     private static final Interpolator interpolator = t -> {
         --t;
         return t * t * t * t * t + 1.0F;
@@ -1425,14 +1428,49 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             actionModeViews.add(gotoItem);
             gotoItem.setOnClickListener(v -> onActionBarItemClick(gotochat));
 
+            // dev alex
+            boolean letShare = true;
+            TLRPC.Chat currentChat = null;
+            if (parent != null && parent.getMessagesStorage() != null && chatInfo != null && parent.getMessagesController().getChat(chatInfo.id) != null) {
+                currentChat = parent.getMessagesController().getChat(chatInfo.id);
+                letShare = !(currentChat != null && currentChat.noforwards && TextUtils.isEmpty(currentChat.username));
+            }
             forwardItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
             forwardItem.setIcon(R.drawable.msg_forward);
             forwardItem.setContentDescription(LocaleController.getString("Forward", R.string.Forward));
             forwardItem.setDuplicateParentStateEnabled(false);
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
-            forwardItem.setOnClickListener(v -> onActionBarItemClick(forward));
+
+            if (letShare) {
+                forwardItem.setAlpha(1f);
+                forwardItem.setOnClickListener(v -> onActionBarItemClick(forward));
+            } else {
+                forwardItem.setAlpha(0.5f);
+                TLRPC.Chat finalCurrentChat = currentChat;
+                forwardItem.setOnClickListener(v -> {
+                    // dev alex
+                    // own text with 4 or 9 8
+                    if (parent.getLayoutContainer() != null) {
+                        String noForwardHint = "";
+                        if (finalCurrentChat != null && (ChatObject.isChannel(finalCurrentChat) && !finalCurrentChat.megagroup)) {
+                            noForwardHint = LocaleController.getString("noForwardChannelHint", R.string.noForwardChannelHint);
+                        } else {
+                            noForwardHint = LocaleController.getString("noForwardChatHint", R.string.noForwardChatHint);
+                        }
+                        hint = new HintView(profileActivity.getParentActivity(), 8, parent.getResourceProvider());
+                        hint.setAlpha(0.0f);
+                        hint.setVisibility(View.INVISIBLE);
+                        hint.setShowingDuration(2000);
+                        hint.setText(noForwardHint);
+                        // dev alex ToDo: change height somehow?
+                        parent.getLayoutContainer().addView(hint, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+                        hint.showForView(forwardItem, true);
+                    }
+                });
+            }
         }
+        // do main stuff
         deleteItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
         deleteItem.setIcon(R.drawable.msg_delete);
         deleteItem.setContentDescription(LocaleController.getString("Delete", R.string.Delete));

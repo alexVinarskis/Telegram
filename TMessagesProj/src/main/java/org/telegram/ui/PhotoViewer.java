@@ -3513,7 +3513,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         return allowSharing;
     }
     private boolean allowSharing() {
-        Log.e("DB", "got allowSharing called: " + allowSharing);
         if (parentChatActivity != null) return allowSharing(parentChatActivity);
         return allowSharing;
     }
