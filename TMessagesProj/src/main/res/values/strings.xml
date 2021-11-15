@@ -10,6 +10,7 @@
     <string name="noForwardChatHint">Forwards from this group are restricted</string>
     <string name="noForwardChannelHint">Forwards from this channel are restricted</string>
     <string name="sendMessageAsTitle">Send message as…</string>
+    <string name="personalAccount">personal account</string>
 
 
     <string name="AppName">Telegram Contest</string>
