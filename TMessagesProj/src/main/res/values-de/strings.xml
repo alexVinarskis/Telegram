@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="ManageRestrictionsTitle">Inhalt speichern</string>
+    <string name="ManageRestrictionsSwitch">Beschränken Sie das Speichern von Inhalten</string>
+    <string name="ManageRestrictionsInfo">Die Teilnehmer können keine Nachrichten von diesem Kanal weiterleiten oder Mediendateien speichern.</string>
+    <string name="ToastForwardsRestricted">Weiterleitungen wurden vom Chat-/Channel-Besitzer eingeschränkt. Diese Nachricht wird nicht gesendet.</string>
+    <string name="ForwardsRestrictedChatInfo">Weiterleitungen von dieser Gruppe\nsind eingeschränkt.</string>
+    <string name="ForwardsRestrictedChannelInfo">Weiterleitungen von diesem Kanal\nsind eingeschränkt.</string>
+    <string name="noForwardChatHint">Weiterleitungen aus dieser Gruppe sind eingeschränkt</string>
+    <string name="noForwardChannelHint">Weiterleitungen von diesem Kanal sind eingeschränkt</string>
+    <string name="sendMessageAsTitle">Nachricht senden als...</string>
+    <string name="personalAccount">persönliches Konto</string>
+
+    <string name="AppName">Telegram Contest</string>
+    <string name="AppNameBeta">Telegram Contest Beta</string>
     <string name="LanguageName">Deutsch</string>
     <string name="English">Englisch</string>
     <string name="LanguageNameInEnglish">German</string>

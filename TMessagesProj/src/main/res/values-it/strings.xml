@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="ManageRestrictionsTitle">Salvataggio di contenuti</string>
+    <string name="ManageRestrictionsSwitch">Limita il salvataggio dei contenuti</string>
+    <string name="ManageRestrictionsInfo">I partecipanti non saranno in grado di inoltrare messaggi da questo canale o salvare file multimediali.</string>
+    <string name="ToastForwardsRestricted">Gli inoltro sono stati limitati dal proprietario della chat/canale. Questo messaggio non verrà inviato.</string>
+    <string name="ForwardsRestrictedChatInfo">Gli inoltratori di questo gruppo\nsono limitati.</string>
+    <string name="ForwardsRestrictedChannelInfo">Gli inoltratori da questo canale\nsono limitati.</string>
+    <string name="noForwardChatHint">Gli inoltratori di questo gruppo sono limitati</string>
+    <string name="noForwardChannelHint">Gli inoltratori da questo canale sono limitati</string>
+    <string name="sendMessageAsTitle">Invia messaggio come...</string>
+    <string name="personalAccount">account personale</string>
+
+    <string name="AppName">Telegram Contest</string>
+    <string name="AppNameBeta">Telegram Contest Beta</string>
     <string name="LanguageName">Italiano</string>
     <string name="English">Inglese</string>
     <string name="LanguageNameInEnglish">Italian</string>

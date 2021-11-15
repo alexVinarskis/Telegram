@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="ManageRestrictionsTitle">Inhoud opslaan</string>
+    <string name="ManageRestrictionsSwitch">Inhoud opslaan beperken</string>
+    <string name="ManageRestrictionsInfo">Deelnemers kunnen geen berichten van dit kanaal doorsturen of mediabestanden opslaan.</string>
+    <string name="ToastForwardsRestricted">Forwards werden beperkt door de eigenaar van het chat/kanaal. Dit bericht wordt niet verzonden.</string>
+    <string name="ForwardsRestrictedChatInfo">Forwards vanuit deze groep\nzijn beperkt.</string>
+    <string name="ForwardsRestrictedChannelInfo">Doorsturen vanaf dit kanaal\nzijn beperkt.</string>
+    <string name="noForwardChatHint">Forwards vanuit deze groep zijn beperkt</string>
+    <string name="noForwardChannelHint">Doorsturen vanaf dit kanaal zijn beperkt</string>
+    <string name="sendMessageAsTitle">Stuur een bericht als...</string>
+    <string name="personalAccount">persoonlijk account</string>
+
+    <string name="AppName">Telegram Contest</string>
+    <string name="AppNameBeta">Telegram Contest Beta</string>
     <string name="LanguageName">Nederlands</string>
     <string name="English">Engels</string>
     <string name="LanguageNameInEnglish">Dutch</string>

@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="ManageRestrictionsTitle">Guardar contenido</string>
+    <string name="ManageRestrictionsSwitch">Restringir guardar contenido</string>
+    <string name="ManageRestrictionsInfo">Los participantes no podrán reenviar mensajes de este canal ni guardar archivos multimedia.</string>
+    <string name="ToastForwardsRestricted">Los reenvíos fueron restringidos por el propietario del chate/canal. Este mensaje no se enviará.</string>
+    <string name="ForwardsRestrictedChatInfo">Los reenvíos de este grupo\nestán restringidos.</string>
+    <string name="ForwardsRestrictedChannelInfo">Los reenvíos desde este canal\nestán restringidos.</string>
+    <string name="noForwardChatHint">Los reenvíos de este grupo están restringidos</string>
+    <string name="noForwardChannelHint">Los reenvíos desde este canal están restringidos</string>
+    <string name="sendMessageAsTitle">Enviar mensaje como...</string>
+    <string name="personalAccount">cuenta personal</string>
+
+    <string name="AppName">Telegram Contest</string>
+    <string name="AppNameBeta">Telegram Contest Beta</string>
     <string name="LanguageName">Español</string>
     <string name="English">Inglés</string>
     <string name="LanguageNameInEnglish">Spanish</string>

@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ManageRestrictionsTitle">حفظ المحتوى</string>
+    <string name="ManageRestrictionsSwitch">تقييد حفظ المحتوى</string>
+    <string name="ManageRestrictionsInfo">لن يتمكن المشاركون من إعادة توجيه الرسائل من هذه القناة أو حفظ ملفات الوسائط.</string>
+    <string name="ToastForwardsRestricted">تم تقييد المهاجمين من قبل مالك الدردشة/القناة. لن يتم إرسال هذه الرسالة.</string>
+    <string name="ForwardsRestrictedChatInfo">عمليات إعادة التوجيه من هذه المجموعة\nمقيدة.</string>
+    <string name="ForwardsRestrictedChannelInfo">عمليات إعادة التوجيه من هذه القناة\nمقيدة.</string>
+    <string name="noForwardChatHint">يتم تقييد المهاجمين من هذه المجموعة.</string>
+    <string name="noForwardChannelHint">يتم تقييد المهاجمين من هذه القناة</string>
+    <string name="sendMessageAsTitle">إرسال رسالة كـ...</string>
+    <string name="personalAccount">حساب شخصي</string>
+
     <string name="AppName">تيليجرام</string>
     <string name="AppNameBeta">Telegram Beta</string>
     <string name="LanguageName">العربية</string>

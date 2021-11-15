@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">텔레그램</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="ManageRestrictionsTitle">콘텐츠 저장</string>
+    <string name="ManageRestrictionsSwitch">콘텐츠 저장 제한</string>
+    <string name="ManageRestrictionsInfo">참가자는 이 채널의 메시지를 전달하거나 미디어 파일을 저장할 수 없습니다.</string>
+    <string name="ToastForwardsRestricted">채팅/채널 소유자가 포워드를 제한했습니다.이 메시지는 전송되지 않습니다.</string>
+    <string name="ForwardsRestrictedChatInfo">이 그룹으로부터의 전달은\n제한됩니다.</string>
+    <string name="ForwardsRestrictedChannelInfo">이 채널의 포워드는\n제한됩니다.</string>
+    <string name="noForwardChatHint">이 그룹으로부터의 포워드는 제한됨</string>
+    <string name="noForwardChannelHint">이 채널의 포워드는 제한됨</string>
+    <string name="sendMessageAsTitle">다른 이름으로 메시지 보내기...</string>
+    <string name="personalAccount">개인 계정</string>
+
+    <string name="AppName">Telegram Contest</string>
+    <string name="AppNameBeta">Telegram Contest Beta</string>
     <string name="LanguageName">한국어</string>
     <string name="English">영어</string>
     <string name="LanguageNameInEnglish">한국어</string>
