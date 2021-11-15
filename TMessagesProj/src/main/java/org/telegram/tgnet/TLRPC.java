@@ -229,6 +229,7 @@ public class TLRPC {
         public boolean send_media;
         public boolean send_stickers;
         public boolean send_gifs;
+        public boolean allow_send_as;
         public boolean send_games;
         public boolean send_inline;
         public boolean embed_links;
@@ -258,6 +259,7 @@ public class TLRPC {
             send_media = (flags & 4) != 0;
             send_stickers = (flags & 8) != 0;
             send_gifs = (flags & 16) != 0;
+            allow_send_as = (flags & 29) != 0;
             send_games = (flags & 32) != 0;
             send_inline = (flags & 64) != 0;
             embed_links = (flags & 128) != 0;
@@ -275,6 +277,7 @@ public class TLRPC {
             flags = send_media ? (flags | 4) : (flags &~ 4);
             flags = send_stickers ? (flags | 8) : (flags &~ 8);
             flags = send_gifs ? (flags | 16) : (flags &~ 16);
+            flags = allow_send_as ? (flags | 29) : (flags &~ 29);
             flags = send_games ? (flags | 32) : (flags &~ 32);
             flags = send_inline ? (flags | 64) : (flags &~ 64);
             flags = embed_links ? (flags | 128) : (flags &~ 128);
@@ -2132,6 +2135,7 @@ public class TLRPC {
 		public boolean send_media;
 		public boolean send_stickers;
 		public boolean send_gifs;
+		public boolean allow_send_as;
 		public boolean send_games;
 		public boolean send_inline;
 		public boolean embed_links;
@@ -2157,6 +2161,7 @@ public class TLRPC {
 			send_media = (flags & 4) != 0;
 			send_stickers = (flags & 8) != 0;
 			send_gifs = (flags & 16) != 0;
+            allow_send_as = (flags & 29) != 0;
 			send_games = (flags & 32) != 0;
 			send_inline = (flags & 64) != 0;
 			embed_links = (flags & 128) != 0;
@@ -2170,6 +2175,7 @@ public class TLRPC {
 			flags = send_media ? (flags | 4) : (flags &~ 4);
 			flags = send_stickers ? (flags | 8) : (flags &~ 8);
 			flags = send_gifs ? (flags | 16) : (flags &~ 16);
+            flags = allow_send_as ? (flags | 29) : (flags &~ 29);
 			flags = send_games ? (flags | 32) : (flags &~ 32);
 			flags = send_inline ? (flags | 64) : (flags &~ 64);
 			flags = embed_links ? (flags | 128) : (flags &~ 128);
@@ -37253,6 +37259,7 @@ public class TLRPC {
             newRights.send_media = rights.send_media;
             newRights.send_stickers = rights.send_stickers;
             newRights.send_gifs = rights.send_gifs;
+            newRights.allow_send_as = rights.allow_send_as;
             newRights.send_games = rights.send_games;
             newRights.send_inline = rights.send_inline;
             newRights.embed_links = rights.embed_links;
