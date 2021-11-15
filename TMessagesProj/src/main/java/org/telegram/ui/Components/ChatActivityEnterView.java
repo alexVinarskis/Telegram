@@ -37,6 +37,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -1708,7 +1709,10 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         Log.e("DB", "ETC: partial yes");
         return true;
     }
+    TLRPC.Peer currentDefaultPeer = null;
     private void changeDefaultSendAs(TLRPC.Peer newPeer) {
+        // reset global
+        currentDefaultPeer = newPeer;
         // reset local
         info.default_send_as = newPeer;
         // reset API
@@ -1799,11 +1803,6 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
                     linearLayout.addView(newView);
                 }
             }
-            // add XX extra fake ones
-//            linearLayout.addView(generateProfileEntry(peers.get(0)));
-//            linearLayout.addView(generateProfileEntry(peers.get(0)));
-//            linearLayout.addView(generateProfileEntry(peers.get(0)));
-//            linearLayout.addView(generateProfileEntry(peers.get(0)));
             scrollView.addView(linearLayout);
             if (peers.size()> 6) scrollView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, AndroidUtilities.dp(360)));
             popupLayout.addView(scrollView);
@@ -1916,11 +1915,52 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         avatarImageView.setForUserOrChat(userOrChat, avatarDrawable);
         avatarImageView.setLayoutParams(new LayoutParams(AndroidUtilities.dp(40), AndroidUtilities.dp(40)));
 
+
+        // attempt to make blue selector circle around avatar
+        //
+        GradientDrawable shapeBlue =  new GradientDrawable();
+        shapeBlue.setCornerRadius(AndroidUtilities.dp(20));
+        shapeBlue.setColor(getThemedColor(Theme.key_switchTrackChecked));
+        shapeBlue.setSize(AndroidUtilities.dp(40), AndroidUtilities.dp(40));
+        //
+        GradientDrawable shapeWhite =  new GradientDrawable();
+        shapeWhite.setCornerRadius(AndroidUtilities.dp(20f));
+        shapeWhite.setColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+        shapeWhite.setSize(AndroidUtilities.dp(40), AndroidUtilities.dp(40));
+        //
+        View view = new View(getContext()) ;
+        view.setBackground(shapeBlue);
+        View blueView = new View(getContext());
+        blueView.setBackgroundColor(getThemedColor(Theme.key_switchTrackChecked));
+        blueView.setLayoutParams(new LayoutParams(AndroidUtilities.dp(40), AndroidUtilities.dp(40)));
+        View whiteView = new View(getContext());
+        whiteView.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+        whiteView.setLayoutParams(new LayoutParams(AndroidUtilities.dp(40), AndroidUtilities.dp(40)));
+        //
+        blueView.setBackground(shapeBlue);
+        whiteView.setBackground(shapeWhite);
+        //
+        FrameLayout avatarWrapper = new FrameLayout(getContext());
+        avatarWrapper.addView(blueView, LayoutHelper.createFrame(40, 40, Gravity.CENTER));
+        avatarWrapper.addView(whiteView, LayoutHelper.createFrame(36, 36, Gravity.CENTER));
+
+        if (
+                (userOrChat instanceof TLRPC.User && info.default_send_as.user_id == ((TLRPC.User) userOrChat).id) ||
+                (userOrChat instanceof TLRPC.Chat && info.default_send_as.chat_id == ((TLRPC.Chat) userOrChat).id) ||
+                (userOrChat instanceof TLRPC.Chat && info.default_send_as.channel_id == ((TLRPC.Chat) userOrChat).id))
+        {
+            avatarWrapper.addView(avatarImageView, LayoutHelper.createFrame(33, 33, Gravity.CENTER));
+        } else {
+            avatarWrapper.addView(avatarImageView, LayoutHelper.createFrame(40, 40, Gravity.CENTER));
+        }
+        // normal things
         SimpleTextView titleTextView = new SimpleTextView(getContext());
         titleTextView.setTextSize(16);
         titleTextView.setGravity(Gravity.LEFT|Gravity.TOP);
         titleTextView.setLeftDrawableTopPadding(-AndroidUtilities.dp(1.3f));
         titleTextView.setText(titleString);
+        titleTextView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
+
 
         SimpleTextView subtitleTextView = new SimpleTextView(getContext());
         subtitleTextView.setTextColor(0xff7C8286);
@@ -1929,6 +1969,8 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         subtitleTextView.setGravity(Gravity.LEFT|Gravity.BOTTOM);
         subtitleTextView.setText(subtitleString);
         subtitleTextView.setTag(peer);
+        subtitleTextView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText6));
+
         profileLayoutEntries.add(subtitleTextView);
 
         LinearLayout rhs = new LinearLayout(getContext());
@@ -1943,7 +1985,8 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
 
         LinearLayout layout = new LinearLayout(getContext());
         layout.setOrientation(LinearLayout.HORIZONTAL);
-        layout.addView(avatarImageView);
+//        layout.addView(avatarImageView);
+        layout.addView(avatarWrapper);
         layout.addView(rhs);
         layout.setMinimumHeight(AndroidUtilities.dp(52));
         layout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(6), AndroidUtilities.dp(16), AndroidUtilities.dp(10));
