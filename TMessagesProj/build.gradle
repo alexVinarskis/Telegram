@@ -43,7 +43,7 @@ dependencies {
 
 android {
     compileSdkVersion 31
-    buildToolsVersion '31.0.0'
+    buildToolsVersion '30.0.3'
     ndkVersion "21.4.7075529"
 
     defaultConfig.applicationId = "org.telegram.messenger"
@@ -94,12 +94,15 @@ android {
             debuggable true
             jniDebuggable true
             signingConfig signingConfigs.debug
-            applicationIdSuffix ".beta"
+            applicationIdSuffix ".vinalexbeta"
             minifyEnabled false
             shrinkResources false
             multiDexEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             ndk.debugSymbolLevel = 'FULL'
+            // improving build speed
+            ext.enableCrashlytics = false
+            ext.alwaysUpdateBuildId = false
         }
 
         /*debugAsan {
@@ -157,6 +160,7 @@ android {
             debuggable false
             jniDebuggable false
             signingConfig signingConfigs.release
+            applicationIdSuffix ".vinalex"
             minifyEnabled true
             shrinkResources false
             multiDexEnabled true
@@ -297,6 +301,24 @@ android {
                 abiVersionCode = 9
             }
         }
+        fast {
+            ndk {
+                abiFilters "x86"
+                // abiFilters "arm64-v8a"
+            }
+            sourceSets.debug {
+                manifest.srcFile 'config/debug/AndroidManifest_SDK23.xml'
+            }
+            sourceSets.release {
+                manifest.srcFile 'config/release/AndroidManifest_SDK23.xml'
+            }
+            minSdkVersion 23
+            ext {
+                abiVersionCode = 4  // x86 - 4ß
+                // abiVersionCode = 7  // arm64 - 4ß
+            }
+            resConfigs "en", "xxhdpi"
+        }
     }
 
     defaultConfig.versionCode = 2481
@@ -310,7 +332,7 @@ android {
 
     variantFilter { variant ->
         def names = variant.flavors*.name
-        if (variant.buildType.name != "release" && !names.contains("afat")) {
+        if (variant.buildType.name != "release" && !(names.contains("afat") || names.contains("fast"))) {
             setIgnore(true)
         }
     }
