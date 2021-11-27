@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- nov2021r2 -->
+    <string name="ReactionsSwitch">Reactions</string>
+    <string name="ReactionsSwitchOff">Off</string>
+    <string name="ReactionsFragmentTitle">Reactions</string>
+    <string name="ReactionsFragmentSwitch">Enable Reactions</string>
+    <string name="ReactionsFragmentHintChannel">Allow subscribers to react to channel posts.</string>
+    <string name="ReactionsFragmentHintGroup">Allow members to react to group posts.</string>
+    <string name="ReactionsFragmentAvailable">Available reactions</string>
+
     <string name="AppName">Telegram</string>
     <string name="AppNameBeta">Telegram Beta</string>
     <string name="LanguageName">English</string>

@@ -25,6 +25,7 @@ import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -113,6 +114,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     private TextCell membersCell;
     private TextCell memberRequestsCell;
     private TextCell inviteLinksCell;
+    private TextCell reactionsCell;
     private TextCell adminCell;
     private TextCell blockCell;
     private TextCell logCell;
@@ -137,6 +139,8 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     private boolean donePressed;
 
     private final static int done_button = 1;
+
+    private TLRPC.TL_messages_availableReactions availableReactions;
 
     private PhotoViewer.PhotoViewerProvider provider = new PhotoViewer.EmptyPhotoViewerProvider() {
 
@@ -810,6 +814,14 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             presentFragment(fragment);
         });
 
+        // dev alex
+        reactionsCell = new TextCell(context);
+        reactionsCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
+        reactionsCell.setOnClickListener(v -> {
+            ReactionsEditActivity activity = new ReactionsEditActivity(chatId, info, availableReactions);
+            presentFragment(activity);
+        });
+
         adminCell = new TextCell(context);
         adminCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
         adminCell.setOnClickListener(v -> {
@@ -854,6 +866,8 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         if (!isChannel) {
             infoContainer.addView(inviteLinksCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
+        // alex dev
+        infoContainer.addView(reactionsCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         infoContainer.addView(adminCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         infoContainer.addView(membersCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         if (memberRequestsCell != null && info != null && info.requests_pending > 0) {
@@ -1449,6 +1463,37 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                     inviteLinksCell.setTextAndValueAndIcon(LocaleController.getString("InviteLinks", R.string.InviteLinks), "1", R.drawable.actions_link, true);
                 }
             }
+            // dev alex
+            if (info == null) {
+                reactionsCell.setVisibility(View.GONE);
+            } else {
+                TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
+                req.hash = 0;
+                getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (error != null) {
+                        Log.e("DB","got error rip");
+                        return;
+                    }
+                    if (response instanceof TLRPC.TL_messages_availableReactions) {
+                        // save possible reactions
+                        availableReactions = ((TLRPC.TL_messages_availableReactions) response);
+                        // update numbers
+                        int numReactions = info.available_reactions.size();
+                        int totalReactions = ((TLRPC.TL_messages_availableReactions) response).reactions.size();
+                        Log.e("DB", "there are total " + totalReactions + " reactions;");
+                        // update UI
+                        // Todo: pull cache instead!
+                        if (numReactions > 0) {
+                            reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), numReactions + "/" + totalReactions, R.drawable.actions_reactions, true);
+                        } else {
+                            reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), LocaleController.getString("ReactionsSwitchOff", R.string.ReactionsSwitchOff), R.drawable.actions_reactions, true);
+                        }
+                    } else {
+                        Log.e("DB","got not available reactions");
+                        return;
+                    }
+                }));
+            }
         }
 
         if (stickersCell != null && info != null) {
@@ -1486,6 +1531,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         themeDescriptions.add(new ThemeDescription(adminCell, ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_listSelector));
         themeDescriptions.add(new ThemeDescription(adminCell, ThemeDescription.FLAG_TEXTCOLOR, new Class[]{TextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
         themeDescriptions.add(new ThemeDescription(adminCell, 0, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
+        themeDescriptions.add(new ThemeDescription(reactionsCell, ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_listSelector));
+        themeDescriptions.add(new ThemeDescription(reactionsCell, ThemeDescription.FLAG_TEXTCOLOR, new Class[]{TextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
+        themeDescriptions.add(new ThemeDescription(reactionsCell, 0, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
         themeDescriptions.add(new ThemeDescription(inviteLinksCell, ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_listSelector));
         themeDescriptions.add(new ThemeDescription(inviteLinksCell, ThemeDescription.FLAG_TEXTCOLOR, new Class[]{TextCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
         themeDescriptions.add(new ThemeDescription(inviteLinksCell, 0, new Class[]{TextCell.class}, new String[]{"imageView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayIcon));
