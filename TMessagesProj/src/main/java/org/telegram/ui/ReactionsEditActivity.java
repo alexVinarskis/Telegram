@@ -81,14 +81,27 @@ public class ReactionsEditActivity extends BaseFragment {
                 Log.e("DB","Error updating allowed emojis " + error.text);
             }
         });
+
+//        TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
+//        req2.chat_id = chatId;
+//        getConnectionsManager().sendRequest(req2, (response, error) ->  {
+//            if (error != null) {
+//                Log.e("DB","Error pulling chatFull: " + error.text);
+//            } else {
+//                TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
+//                if (messagesChatFull.full_chat != null) {
+//                    AndroidUtilities.runOnUIThread(() -> NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.chatInfoDidLoad, messagesChatFull.full_chat));
+//                }
+//            }
+//        });
     }
     private void toggleEnableEmoji(TLRPC.TL_availableReaction reaction, EmojiTextCell emojiSwitch  ) {
         emojiSwitch.setChecked(!emojiSwitch.isChecked());
         // update locals
         if (emojiSwitch.isChecked()) {
-            info.available_reactions.add(reaction.reaction);
+            if (!info.available_reactions.contains(reaction.reaction)) info.available_reactions.add(reaction.reaction);
         } else {
-            info.available_reactions.remove(reaction.reaction);
+            if (info.available_reactions.contains(reaction.reaction)) info.available_reactions.remove(reaction.reaction);
         }
         // check if all were off
         if (info.available_reactions.isEmpty() && switchCell.isChecked()) toggleEnableAllEmoji();
@@ -103,6 +116,7 @@ public class ReactionsEditActivity extends BaseFragment {
             for (EmojiTextCell emojiButton : emojiButtons) {
                 emojiButton.setChecked(true, false);
             }
+            info.available_reactions.clear();
             for (TLRPC.TL_availableReaction reaction : availableReactions) {
                 info.available_reactions.add(reaction.reaction);
             }
@@ -154,7 +168,7 @@ public class ReactionsEditActivity extends BaseFragment {
         // switch
         switchCell = new TextCheckCellAnimated(context);
         switchCell.setHeight(54);            // same as actionBar height
-        switchCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        switchCell.setTextColor(Theme.getColor(Theme.key_wallet_whiteText));
         switchCell.setTextAndCheck(LocaleController.getString("ReactionsFragmentSwitch", R.string.ReactionsFragmentSwitch), !info.available_reactions.isEmpty(), false);
         switchCell.setOnClickListener(v -> toggleEnableAllEmoji());
         parentView.addView(switchCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));

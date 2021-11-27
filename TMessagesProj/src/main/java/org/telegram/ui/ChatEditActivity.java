@@ -1480,7 +1480,6 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                         // update numbers
                         int numReactions = info.available_reactions.size();
                         int totalReactions = ((TLRPC.TL_messages_availableReactions) response).reactions.size();
-                        Log.e("DB", "there are total " + totalReactions + " reactions;");
                         // update UI
                         // Todo: pull cache instead!
                         if (numReactions > 0) {
