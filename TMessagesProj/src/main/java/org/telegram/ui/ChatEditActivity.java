@@ -1010,8 +1010,10 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.chatInfoDidLoad) {
+            Log.e("DB","GOT chatInfo updates");
             TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
             if (chatFull.id == chatId) {
+                Log.e("DB","DECODING chatInfo updates.. size: " + chatFull.available_reactions.size());
                 if (info == null && descriptionTextView != null) {
                     descriptionTextView.setText(chatFull.about);
                 }
@@ -1464,9 +1466,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 }
             }
             // dev alex
-            // if (info == null) {
-            // hides option for PRIVATE GROUP chats
-            if (info == null || (isPrivate && !isChannel)) {
+            if (info == null) {
                 reactionsCell.setVisibility(View.GONE);
             } else {
                 TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();

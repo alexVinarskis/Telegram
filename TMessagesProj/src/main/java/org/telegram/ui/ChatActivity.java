@@ -18878,6 +18878,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             pullingDownOffset = 0;
             chatListView.invalidate();
         }
+        if (chatInfo != null)
+            Log.e("DB", "chatActivity; current allowed size: " + chatInfo.available_reactions.size());
+        else
+            Log.e("DB", "chatActivity; chat info is nulled");
+
     }
 
     public void checkAdjustResize() {

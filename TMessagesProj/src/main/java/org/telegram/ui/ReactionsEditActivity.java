@@ -25,6 +25,7 @@ import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.LayoutHelper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
 public class ReactionsEditActivity extends BaseFragment {
@@ -42,10 +43,12 @@ public class ReactionsEditActivity extends BaseFragment {
     private boolean isChannel;
 
     private ArrayList<TLRPC.TL_availableReaction> availableReactions;
+    private ArrayList<String> ogAvailableReactions;
 
     public ReactionsEditActivity(long chatId, TLRPC.ChatFull info, TLRPC.TL_messages_availableReactions availableReactions) {
         this.chatId = chatId;
         this.info = info;
+        this.ogAvailableReactions = new ArrayList<>(info.available_reactions);
         if (availableReactions != null) {
             this.availableReactions = availableReactions.reactions;
         }
@@ -71,29 +74,45 @@ public class ReactionsEditActivity extends BaseFragment {
         isChannel = ChatObject.isChannel(currentChat) && !currentChat.megagroup;
         return super.onFragmentCreate();
     }
+    private boolean reactionIdentical() {
+        ArrayList<String> list = new ArrayList<String>(info.available_reactions);
+        Collections.sort(list);
+        Collections.sort(ogAvailableReactions);
+        return  list.equals(ogAvailableReactions);
+    }
 
     private void pushAvailableEmoji() {
-        TLRPC.TL_messages_setChatAvailableReactions req = new TLRPC.TL_messages_setChatAvailableReactions();
-        req.peer = getMessagesController().getInputPeer(-chatId);
-        req.available_reactions = info.available_reactions;
-        getConnectionsManager().sendRequest(req, (response, error) ->  {
-            if (error != null) {
-                Log.e("DB","Error updating allowed emojis " + error.text);
-            }
-        });
+        if (!reactionIdentical()) {
+            Log.e("DB", "pushing emoji to server; id: " + chatId  + " size: " + info.available_reactions.size());
+            TLRPC.TL_messages_setChatAvailableReactions req = new TLRPC.TL_messages_setChatAvailableReactions();
+            req.peer = getMessagesController().getInputPeer(-chatId);
+            req.available_reactions = info.available_reactions;
+            getConnectionsManager().sendRequest(req, (response1, error1) ->  {
+                if (error1 != null) {
+                    Log.e("DB","Error updating allowed emojis " + error1.text);
+                } else {
+                    // reset server state counter
+                    ogAvailableReactions = new ArrayList<>(info.available_reactions);
 
-//        TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
-//        req2.chat_id = chatId;
-//        getConnectionsManager().sendRequest(req2, (response, error) ->  {
-//            if (error != null) {
-//                Log.e("DB","Error pulling chatFull: " + error.text);
-//            } else {
-//                TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
-//                if (messagesChatFull.full_chat != null) {
-//                    AndroidUtilities.runOnUIThread(() -> NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.chatInfoDidLoad, messagesChatFull.full_chat));
-//                }
-//            }
-//        });
+                    // force re-pull updates for chatInfo
+//                    TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
+//                    req2.chat_id = chatId;
+//                    getConnectionsManager().sendRequest(req2, (response, error) ->  {
+//                        if (error != null) {
+//                            Log.e("DB","Error pulling chatFull: " + error.text);
+//                        } else {
+//                            TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
+//                            if (messagesChatFull.full_chat != null) {
+//                                Log.e("DB","pushing chatInfo updates");
+//                                AndroidUtilities.runOnUIThread(() -> NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.chatInfoDidLoad, messagesChatFull.full_chat));
+//                            }
+//                        }
+//                    });
+                }
+            });
+        } else {
+            Log.e("DB", "NOT pushing emoji to server - nothing changed");
+        }
     }
     private void toggleEnableEmoji(TLRPC.TL_availableReaction reaction, EmojiTextCell emojiSwitch  ) {
         emojiSwitch.setChecked(!emojiSwitch.isChecked());
@@ -106,8 +125,8 @@ public class ReactionsEditActivity extends BaseFragment {
         // check if all were off
         if (info.available_reactions.isEmpty() && switchCell.isChecked()) toggleEnableAllEmoji();
         if (!info.available_reactions.isEmpty() && !switchCell.isChecked()) toggleEnableAllEmoji();
-        // push to server
-        pushAvailableEmoji();
+        // push to server; REMOVED - on exit instead;
+        // pushAvailableEmoji();
     }
     private void toggleEnableAllEmoji() {
         switchCell.setChecked(!switchCell.isChecked());
@@ -138,11 +157,17 @@ public class ReactionsEditActivity extends BaseFragment {
             infoContainer.startAnimation(anim);
             spaceCell.startAnimation(anim);
         }
-        // push updates to server
-        pushAvailableEmoji();
+        // push updates to server; REMOVED - on exit instead;
+        // pushAvailableEmoji();
     }
     private boolean checkAllowedEmoji(TLRPC.TL_availableReaction reaction) {
         return info.available_reactions.contains(reaction.reaction);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        pushAvailableEmoji();
     }
 
     @Override
