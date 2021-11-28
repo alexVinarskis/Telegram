@@ -1464,7 +1464,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 }
             }
             // dev alex
-            if (info == null) {
+            // if (info == null) {
+            // hides option for PRIVATE GROUP chats
+            if (info == null || (isPrivate && !isChannel)) {
                 reactionsCell.setVisibility(View.GONE);
             } else {
                 TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
