@@ -216,6 +216,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         imageUpdater.parentFragment = this;
         imageUpdater.setDelegate(this);
         signMessages = currentChat.signatures;
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.chatInfoDidLoadAlex);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.chatInfoDidLoad);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.updateInterfaces);
 
@@ -246,6 +247,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         if (imageUpdater != null) {
             imageUpdater.clear();
         }
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoadAlex);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoad);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.updateInterfaces);
         if (nameTextView != null) {
@@ -1009,7 +1011,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.chatInfoDidLoad) {
+        if (id == NotificationCenter.chatInfoDidLoad || id == NotificationCenter.chatInfoDidLoadAlex) {
             Log.e("DB","GOT chatInfo updates");
             TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
             if (chatFull.id == chatId) {

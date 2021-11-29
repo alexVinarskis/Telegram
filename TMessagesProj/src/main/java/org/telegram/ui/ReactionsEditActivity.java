@@ -13,6 +13,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -20,6 +21,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.EmojiTextCell;
 import org.telegram.ui.Cells.HeaderCell;
+import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCheckCellAnimated;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.LayoutHelper;
@@ -94,17 +96,18 @@ public class ReactionsEditActivity extends BaseFragment {
                     // reset server state counter
                     ogAvailableReactions = new ArrayList<>(info.available_reactions);
 
-                    // force re-pull updates for chatInfo
+
+////                     force re-pull updates for chatInfo
 //                    TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
-//                    req2.chat_id = chatId;
+//                    req2.chat_id = currentChat.id;
 //                    getConnectionsManager().sendRequest(req2, (response, error) ->  {
 //                        if (error != null) {
 //                            Log.e("DB","Error pulling chatFull: " + error.text);
 //                        } else {
 //                            TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
 //                            if (messagesChatFull.full_chat != null) {
-//                                Log.e("DB","pushing chatInfo updates");
-//                                AndroidUtilities.runOnUIThread(() -> NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.chatInfoDidLoad, messagesChatFull.full_chat));
+//                                Log.e("DB","pushing chatInfo updates; size: " + messagesChatFull.full_chat.available_reactions.size());
+//                                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.chatInfoDidLoadAlex, messagesChatFull.full_chat));
 //                            }
 //                        }
 //                    });
@@ -260,7 +263,7 @@ public class ReactionsEditActivity extends BaseFragment {
             }
         }
 
-        // scroll: bottom shadow
+        // scroll: bottom shadow)
         spaceCell = new TextInfoPrivacyCell(context);
         if (!switchCell.isChecked()) spaceCell.setVisibility(View.GONE);
         linearLayout.addView(spaceCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
