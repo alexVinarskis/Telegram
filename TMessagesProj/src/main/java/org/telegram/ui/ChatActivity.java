@@ -20251,11 +20251,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        if (scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
-                            // Todo: fix tap outside
-                            View contentView = scrimPopupWindow.getContentView();
-                            contentView.getLocationInWindow(pos);
-                            rect.set(pos[0], pos[1], pos[0] + contentView.getMeasuredWidth(), pos[1] + contentView.getMeasuredHeight());
+                        // alex dev
+                        if (popupLayout != null && scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
+                            // kinda ignores bubbleView, but if it grabs click itself, it won't call this event
+                            popupLayout.getLocationInWindow(pos);
+                            rect.set(pos[0], pos[1], pos[0] + popupLayout.getMeasuredWidth(), pos[1] + popupLayout.getMeasuredHeight());
                             if (!rect.contains((int) event.getX(), (int) event.getY())) {
                                 scrimPopupWindow.dismiss();
                             }
@@ -20269,7 +20269,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             });
 
-            // dev alex
+            // alex dev
             // inject emoji selector
             if (showReactionToolbar) {
                 // generate emoji layout
@@ -20343,6 +20343,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             popupLayout.setFitItems(true);
 
 
+            // dev alex
             // add left margin bypass
             if (showReactionToolbar && reactionBubbleCell != null && scrimPopupContainerLayout.getMeasuredWidth() < (reactionBubbleCell.getFinalWidth() + AndroidUtilities.dp(2*8))) {
                 int dX = reactionBubbleCell.getFinalWidth() + AndroidUtilities.dp(2*8) - scrimPopupContainerLayout.getMeasuredWidth();
