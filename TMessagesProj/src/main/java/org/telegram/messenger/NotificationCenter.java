@@ -44,6 +44,7 @@ public class NotificationCenter {
     public static final int chatDidCreated = totalEvents++;
     public static final int chatDidFailCreate = totalEvents++;
     public static final int chatInfoDidLoad = totalEvents++;
+    public static final int chatInfoDidLoadAlex = totalEvents++;
     public static final int chatInfoCantLoad = totalEvents++;
     public static final int mediaDidLoad = totalEvents++;
     public static final int mediaCountDidLoad = totalEvents++;

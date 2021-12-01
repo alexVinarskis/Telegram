@@ -47,12 +47,12 @@ public class ReactionsEditActivity extends BaseFragment {
     private ArrayList<TLRPC.TL_availableReaction> availableReactions;
     private ArrayList<String> ogAvailableReactions;
 
-    public ReactionsEditActivity(long chatId, TLRPC.ChatFull info, TLRPC.TL_messages_availableReactions availableReactions) {
+    public ReactionsEditActivity(long chatId, TLRPC.ChatFull info, ArrayList<TLRPC.TL_availableReaction> availableReactions) {
         this.chatId = chatId;
         this.info = info;
         this.ogAvailableReactions = new ArrayList<>(info.available_reactions);
         if (availableReactions != null) {
-            this.availableReactions = availableReactions.reactions;
+            this.availableReactions = availableReactions;
         }
     }
 

@@ -81,10 +81,8 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -169,7 +167,7 @@ import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Cells.ContextLinkCell;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.Cells.MentionCell;
-import org.telegram.ui.Cells.ShadowSectionCell;
+import org.telegram.ui.Cells.ReactionBubbleCell;
 import org.telegram.ui.Cells.StickerCell;
 import org.telegram.ui.Cells.TextSelectionHelper;
 import org.telegram.ui.Components.AlertsCreator;
@@ -811,6 +809,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     // dev alex
     private boolean showReactionToolbar = false;
     ActionBarPopupWindow.ActionBarPopupWindowLayout ReactionToolbar;
+
+    private ArrayList<TLRPC.TL_availableReaction> availableReactions;
 
     private interface ChatActivityDelegate {
         default void openReplyMessage(int mid) {
@@ -1695,6 +1695,23 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), (dialogInterface, i) -> finishFragment());
                 showDialog(builder.create());
             }, timeout * 1000L);
+        }
+
+        // dev alex
+        if (!(availableReactions != null && !availableReactions.isEmpty())) {
+            TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
+            req.hash = 0;
+            getConnectionsManager().sendRequest(req, (response, error)  -> {
+                if (error != null) {
+                    android.util.Log.e("DB", "MAIN: Error pulling all emoji: " + error);
+                    return;
+                }
+                if (response instanceof TLRPC.TL_messages_availableReactions) {
+                    // save possible reactions
+                    android.util.Log.e("DB", "MAIN: updating emoji available");
+                    availableReactions = ((TLRPC.TL_messages_availableReactions) response).reactions;
+                }
+            });
         }
         return true;
     }
@@ -17116,7 +17133,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else if (fragment instanceof ChatEditActivity) {
                     Bundle args = new Bundle();
                     args.putLong("chat_id", channelId);
-                    actionBarLayout.addFragmentToStack(new ChatEditActivity(args), a);
+                    actionBarLayout.addFragmentToStack(new ChatEditActivity(args, availableReactions), a);
                     fragment.removeSelfFromStack();
                 } else if (fragment instanceof ChatUsersActivity) {
                     ChatUsersActivity usersActivity = (ChatUsersActivity) fragment;
@@ -20143,6 +20160,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 });
                 if (showReactionToolbar) {
                     popupLayout.addView(messageSeenLayout);
+
                     // spacer
                     Drawable shadow = Theme.getThemedDrawable(getParentActivity(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow);
                     Drawable background = new ColorDrawable(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -20225,6 +20243,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 public boolean onTouch(View v, MotionEvent event) {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                         if (scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
+                            // Todo: fix tap outside
                             View contentView = scrimPopupWindow.getContentView();
                             contentView.getLocationInWindow(pos);
                             rect.set(pos[0], pos[1], pos[0] + contentView.getMeasuredWidth(), pos[1] + contentView.getMeasuredHeight());
@@ -20244,44 +20263,12 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             // dev alex
             // inject emoji selector
             if (showReactionToolbar) {
-//                LinearLayout planeLayout = new LinearLayout(getParentActivity());
-//                planeLayout.setMinimumWidth(AndroidUtilities.dp(300));
-//                planeLayout.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
-//                TextView text1 = new TextView(getParentActivity());
-//                text1.setMinimumWidth(AndroidUtilities.dp(200));
-//                text1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-//                text1.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubmenuItem));
-//                text1.setPadding(AndroidUtilities.dp(18), AndroidUtilities.dp(12), AndroidUtilities.dp(18), AndroidUtilities.dp(12));
-//                text1.setText("random text here");
-//                planeLayout.addView(text1);
-//                scrimPopupContainerLayout.addView(planeLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0, -8));
-
-                ReactionToolbar = new ActionBarPopupWindow.ActionBarPopupWindowLayout(getParentActivity(), R.drawable.popup_fixed_alert, themeDelegate);
-                ReactionToolbar.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
-
-                HorizontalScrollView scrollView = new HorizontalScrollView(getParentActivity()) {
-                    @Override
-                    public boolean requestChildRectangleOnScreen(View child, Rect rectangle, boolean immediate) {
-                        rectangle.right += AndroidUtilities.dp(60);
-                        return super.requestChildRectangleOnScreen(child, rectangle, immediate);
-                    }
-                };
-                scrollView.setFillViewport(true);
-                scrollView.setHorizontalScrollBarEnabled(false);
-                scrollView.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(48), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(48), View.MeasureSpec.EXACTLY));
-                ReactionToolbar.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
-
-                TextView text = new TextView(getParentActivity());
-                text.setMinimumWidth(AndroidUtilities.dp(48));
-                text.setHeight(AndroidUtilities.dp(48));
-                text.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 28);
-                text.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubmenuItem));
-                text.setPadding(AndroidUtilities.dp(2), AndroidUtilities.dp(2), AndroidUtilities.dp(2), AndroidUtilities.dp(2));
-                text.setText("\uD83D\uDE33  \uD83E\uDD75");
-
-                scrollView.addView(text, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
-                scrimPopupContainerLayout.addView(ReactionToolbar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
-                scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, -8, 48, 0));
+                // generate emoji layout
+                ReactionBubbleCell bubbleCell = new ReactionBubbleCell(getParentActivity(), availableReactions, chatInfo);
+                // force-set window to fixed size, in order to be able to open next panel nicely
+                // MOVED
+                scrimPopupContainerLayout.addView(bubbleCell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
+                scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, -8, 32, 0));
             } else {
                 scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, showMessageSeen ? -8 : 0, 0, 0));
             }
@@ -20341,7 +20328,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             scrimPopupWindow.setAnimationStyle(R.style.PopupContextAnimation);
             scrimPopupWindow.setFocusable(true);
             scrimPopupContainerLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
-            if (showReactionToolbar) ReactionToolbar.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(250), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(48), View.MeasureSpec.EXACTLY));
+//            if (showMessageSeen & showReactionToolbar) popupLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(250), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
             scrimPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
             scrimPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
             scrimPopupWindow.getContentView().setFocusableInTouchMode(true);
