@@ -19,14 +19,17 @@ import android.util.Property;
 import android.view.Gravity;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
-import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FileLoader;
+import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimationProperties;
+import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.Switch;
 
@@ -35,7 +38,7 @@ import java.util.ArrayList;
 public class EmojiTextCell extends FrameLayout {
 
     public final SimpleTextView textView;
-    public final TextView imageView;
+    public final BackupImageView imageView;
     private int leftPadding;
     private boolean needDivider;
     private int offsetFromImage = 71;
@@ -79,13 +82,10 @@ public class EmojiTextCell extends FrameLayout {
         textView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         addView(textView);
 
-        imageView = new TextView(context);
-        imageView.setTextColor(Theme.getColor(dialog ? Theme.key_dialogTextBlack : Theme.key_windowBackgroundWhiteBlackText));
-        imageView.setTextSize(25);
+        imageView = new BackupImageView(context);
         addView(imageView);
 
         checkBox = new Switch(context);
-        checkBox.setForegroundGravity(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT);
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
         addView(checkBox);
 
@@ -108,7 +108,7 @@ public class EmojiTextCell extends FrameLayout {
         textView.measure(MeasureSpec.makeMeasureSpec(width - AndroidUtilities.dp(71 + leftPadding) , MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(20), MeasureSpec.EXACTLY));
 
         if (imageView.getVisibility() == VISIBLE) {
-            imageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
+            imageView.measure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(32), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(32), MeasureSpec.EXACTLY));
         }
         if (checkBox.getVisibility() == VISIBLE) {
             checkBox.measure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(37+23+23), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
@@ -134,7 +134,7 @@ public class EmojiTextCell extends FrameLayout {
         textView.layout(viewLeft, viewTop, viewLeft + textView.getMeasuredWidth() - ((checkBox.getVisibility() == VISIBLE) ? AndroidUtilities.dp(37+22) : 0), viewTop + textView.getMeasuredHeight());
 
         if (imageView.getVisibility() == VISIBLE) {
-            viewTop = AndroidUtilities.dp(5);
+            viewTop = AndroidUtilities.dp(8);
             viewLeft = !LocaleController.isRTL ? AndroidUtilities.dp(imageLeft) : width - imageView.getMeasuredWidth() - AndroidUtilities.dp(imageLeft);
             imageView.layout(viewLeft, viewTop, viewLeft + imageView.getMeasuredWidth(), viewTop + imageView.getMeasuredHeight());
         }
@@ -228,17 +228,19 @@ public class EmojiTextCell extends FrameLayout {
         offsetFromImage = value;
     }
 
-    public void setTextAndValueAndIcon(String text, String emoji, boolean checked, boolean divider) {
+    public void setTextAndValueAndIcon(String text, TLRPC.Document emoji, boolean checked, boolean divider) {
         checkBox.setVisibility(VISIBLE);
         checkBox.setChecked(checked, false);
         textView.setText(text);
         imageView.setVisibility(VISIBLE);
         imageView.setPadding(0, 0, 0, 0);
-        imageView.setText(emoji);
+
+        TLRPC.PhotoSize thumb = FileLoader.getClosestPhotoSizeWithSize(emoji.thumbs, 90);
+        imageView.setImage(ImageLocation.getForDocument(thumb, emoji), null, "webp", null, this);
+
         needDivider = divider;
         setWillNotDraw(!needDivider);
     }
-
 
     @Override
     protected void onDraw(Canvas canvas) {

@@ -96,21 +96,29 @@ public class ReactionsEditActivity extends BaseFragment {
                     // reset server state counter
                     ogAvailableReactions = new ArrayList<>(info.available_reactions);
 
+                    // Todo: figure API bs;
+                    // API seem to have a bug: when sending TL_messages_setChatAvailableReactions,
+                    // sometime a chatFull incomes automatically, containing *outdated* available_reactions!
+                    // At the moment of writing, this happens for:
+                    // 1. Production backend - *private* groups
+                    // 2. Test backend - both private and public groups
+                    // The issue does not appear for public nor private channels, nor for public groups on production backend
+                    // Temporarily fix: re-request chatFull, broadcast it to both ChatActivity and ChatEditActivity
+                    // This does work, once API is fixed, this request & broadcast shall be removed, to avoid double pulling chatFull
 
-////                     force re-pull updates for chatInfo
-//                    TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
-//                    req2.chat_id = currentChat.id;
-//                    getConnectionsManager().sendRequest(req2, (response, error) ->  {
-//                        if (error != null) {
-//                            Log.e("DB","Error pulling chatFull: " + error.text);
-//                        } else {
-//                            TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
-//                            if (messagesChatFull.full_chat != null) {
-//                                Log.e("DB","pushing chatInfo updates; size: " + messagesChatFull.full_chat.available_reactions.size());
-//                                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.chatInfoDidLoadAlex, messagesChatFull.full_chat));
-//                            }
-//                        }
-//                    });
+                    TLRPC.TL_messages_getFullChat req2 = new TLRPC.TL_messages_getFullChat();
+                    req2.chat_id = currentChat.id;
+                    getConnectionsManager().sendRequest(req2, (response, error) ->  {
+                        if (error != null) {
+                            Log.e("DB","Error pulling chatFull: " + error.text);
+                        } else {
+                            TLRPC.TL_messages_chatFull messagesChatFull = (TLRPC.TL_messages_chatFull) response;
+                            if (messagesChatFull.full_chat != null) {
+                                Log.e("DB","pushing chatInfo updates; size: " + messagesChatFull.full_chat.available_reactions.size());
+                                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.chatInfoDidLoadAlex, messagesChatFull.full_chat));
+                            }
+                        }
+                    });
                 }
             });
         } else {
@@ -128,8 +136,6 @@ public class ReactionsEditActivity extends BaseFragment {
         // check if all were off
         if (info.available_reactions.isEmpty() && switchCell.isChecked()) toggleEnableAllEmoji();
         if (!info.available_reactions.isEmpty() && !switchCell.isChecked()) toggleEnableAllEmoji();
-        // push to server; REMOVED - on exit instead;
-        // pushAvailableEmoji();
     }
     private void toggleEnableAllEmoji() {
         switchCell.setChecked(!switchCell.isChecked());
@@ -160,8 +166,6 @@ public class ReactionsEditActivity extends BaseFragment {
             infoContainer.startAnimation(anim);
             spaceCell.startAnimation(anim);
         }
-        // push updates to server; REMOVED - on exit instead;
-        // pushAvailableEmoji();
     }
     private boolean checkAllowedEmoji(TLRPC.TL_availableReaction reaction) {
         return info.available_reactions.contains(reaction.reaction);
@@ -254,7 +258,7 @@ public class ReactionsEditActivity extends BaseFragment {
 
                 EmojiTextCell emojiSwitch = new EmojiTextCell(context);
                 emojiSwitch.setBackgroundDrawable(Theme.getSelectorDrawable(false));
-                emojiSwitch.setTextAndValueAndIcon(reaction.title, reaction.reaction, checkAllowedEmoji(reaction), i != availableReactions.size() - 1);
+                emojiSwitch.setTextAndValueAndIcon(reaction.title, reaction.select_animation, checkAllowedEmoji(reaction), i != availableReactions.size() - 1);
                 emojiSwitch.setOnClickListener(v -> {
                     toggleEnableEmoji(reaction, emojiSwitch);
                 });

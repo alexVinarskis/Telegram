@@ -12,6 +12,7 @@ import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.HorizontalScrollView;
@@ -42,12 +43,6 @@ public class ReactionBubbleCell extends RelativeLayout {
         // was manually 300
         int maxAllowedWidth = (int) Math.round(emojiSize*6.5+2*sidePadding);
         int viewHeight = AndroidUtilities.dp(48);
-        setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8));
-
-        // background
-        GradientDrawable shape =  new GradientDrawable();
-        shape.setCornerRadius(viewHeight/2f);
-        shape.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground));
 
         // Todo: add mini bubbles
         // attempt to add blow bubbles under main bubble
@@ -58,11 +53,21 @@ public class ReactionBubbleCell extends RelativeLayout {
         HorizontalScrollView scrollView = new HorizontalScrollView(context);
         scrollView.setHorizontalScrollBarEnabled(false);
 
+        // background
+        GradientDrawable shape =  new GradientDrawable();
+        shape.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground));
+
         // parent view
         LinearLayout planeLayout = new LinearLayout(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            planeLayout.setElevation(12);
+            planeLayout.setClipToOutline(true);
+
+            shape.setCornerRadius(viewHeight/2f);
+        } else {
+            shape.setCornerRadius(viewHeight/8f);
+        }
         planeLayout.setBackgroundDrawable(shape);
-        planeLayout.setElevation(10);
-        planeLayout.setClipToOutline(true);
 
         // emoji holder
         LinearLayout emojiHolder = new LinearLayout(context);
@@ -88,8 +93,8 @@ public class ReactionBubbleCell extends RelativeLayout {
         }
 
         // combine & exit
-        planeLayout.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
-        addView(planeLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+        planeLayout.addView(scrollView);
+        addView(planeLayout, LayoutHelper.createRelative(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 8, 8, 8, 8));
 
         finalWidth = AndroidUtilities.dp(Math.min(totalEmojis*emojiSize + 2*sidePadding, maxAllowedWidth));
 
@@ -100,10 +105,10 @@ public class ReactionBubbleCell extends RelativeLayout {
         return finalWidth;
     }
 
-    public static void slideView(View view, int currentHeight, int newHeight) {
+    public static void slideView(View view, int currentWidth, int newWidth) {
 
         ValueAnimator slideAnimator = ValueAnimator
-                .ofInt(currentHeight, newHeight)
+                .ofInt(currentWidth, newWidth)
                 .setDuration(ChatListItemAnimator.DEFAULT_DURATION); // was 220-250
 
         slideAnimator.addUpdateListener(animation1 -> {
