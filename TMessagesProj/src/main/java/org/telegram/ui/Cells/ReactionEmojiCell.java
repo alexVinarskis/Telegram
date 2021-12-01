@@ -10,6 +10,7 @@ package org.telegram.ui.Cells;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.os.Handler;
 import android.view.Gravity;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -30,6 +31,8 @@ import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RLottieDrawable;
 
+import java.util.Random;
+
 public class ReactionEmojiCell extends FrameLayout {
 
     private BackupImageView imageView;
@@ -44,9 +47,7 @@ public class ReactionEmojiCell extends FrameLayout {
     private boolean recent;
     private static AccelerateInterpolator interpolator = new AccelerateInterpolator(0.5f);
 
-    // Todo: prevent autoplay ffs
-
-    public ReactionEmojiCell(Context context, int size) {
+    public ReactionEmojiCell(Context context, int size, boolean autoStart) {
         super(context);
 
         imageView = new BackupImageView(context);
@@ -56,14 +57,23 @@ public class ReactionEmojiCell extends FrameLayout {
 
         setFocusable(true);
 
-        RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
-        if (drawable != null) {
-            drawable.setAutoRepeat(0);
-            drawable.stop();
-            drawable.setCurrentFrame(1);
+        // prevent autostart
+        if (!autoStart) {
+            imageView.getImageReceiver().setAutoRepeat(0);
+            imageView.getImageReceiver().stopAnimation();
+            imageView.getImageReceiver().setAllowStartLottieAnimation(false);
+            imageView.getImageReceiver().setAllowStartAnimation(false);
         }
-        invalidate();
-        imageView.invalidate();
+    }
+    public ReactionEmojiCell(Context context, int size) {
+        super(context);
+
+        imageView = new BackupImageView(context);
+        imageView.setAspectFit(true);
+        imageView.setLayerNum(1);
+        addView(imageView, LayoutHelper.createFrame(size, size, Gravity.CENTER)); // was 42
+
+        setFocusable(true);
     }
 
     public TLRPC.Document getSticker() {
@@ -96,8 +106,10 @@ public class ReactionEmojiCell extends FrameLayout {
         data.height = imageReceiver.getImageHeight();
         return data;
     }
-
     public void setSticker(TLRPC.Document document, Object parent) {
+        setSticker(document, parent, 0,0);
+    }
+    public void setSticker(TLRPC.Document document, Object parent, float probability, long timeFrameMs) {
         if (document != null) {
             sticker = document;
             parentObject = parent;
@@ -113,6 +125,17 @@ public class ReactionEmojiCell extends FrameLayout {
                 } else {
                     imageView.setImage(ImageLocation.getForDocument(document), "66_66", null, null, parentObject);
                 }
+                // set autoplay if got params to do so
+                if (probability != 0 && timeFrameMs != 0) {
+                    RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
+                    if (drawable != null) drawable.setCurrentFrame(0);
+
+                    int attemptsToShow = (int) (1/probability);
+                    long timeToShow =  new Random().nextInt(Math.round(attemptsToShow))*timeFrameMs;
+                    if (timeFrameMs == 0) playOnce();
+                    else new Handler().postDelayed(this::playOnce, timeToShow);
+                };
+
             } else {
                 if (svgThumb != null) {
                     if (thumb != null) {
@@ -127,15 +150,6 @@ public class ReactionEmojiCell extends FrameLayout {
                     imageView.setImage(ImageLocation.getForDocument(document), null, "webp", null, parentObject);
                 }
             }
-
-            RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
-            if (drawable != null) {
-                drawable.stop();
-                drawable.setAutoRepeat(0);
-                drawable.setCurrentFrame(1);
-            }
-            invalidate();
-            imageView.invalidate();
         }
     }
 
@@ -149,21 +163,15 @@ public class ReactionEmojiCell extends FrameLayout {
         invalidate();
     }
     public void playOnce() {
+        imageView.getImageReceiver().setAutoRepeat(2);
+        imageView.getImageReceiver().setAllowStartLottieAnimation(true);
+        imageView.getImageReceiver().setAllowStartAnimation(true);
+
         RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
         if (drawable != null) {
             drawable.start();
-            drawable.setCurrentFrame(1);
+            drawable.restart();
         }
-        invalidate();
-    }
-    public void stopPlaying() {
-        RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
-        if (drawable != null) {
-            drawable.stop();
-            drawable.setAutoRepeat(0);
-            drawable.setCurrentFrame(1);
-        }
-        invalidate();
     }
 
     public void setScaled(boolean value) {

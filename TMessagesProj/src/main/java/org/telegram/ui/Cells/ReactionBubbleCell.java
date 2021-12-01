@@ -29,12 +29,18 @@ import java.util.ArrayList;
 
 public class ReactionBubbleCell extends RelativeLayout {
 
+    int finalWidth;
+
     public ReactionBubbleCell(Context context, ArrayList<TLRPC.TL_availableReaction> availableReactions, TLRPC.ChatFull info) {
         super(context);
 
         // generic init
+        int totalEmojis = 0;
         int sidePadding = 5;
-        int emojiSize = 44;
+        // was 44
+        int emojiSize = 42;
+        // was manually 300
+        int maxAllowedWidth = (int) Math.round(emojiSize*6.5+2*sidePadding);
         int viewHeight = AndroidUtilities.dp(48);
         setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8));
 
@@ -55,7 +61,7 @@ public class ReactionBubbleCell extends RelativeLayout {
         // parent view
         LinearLayout planeLayout = new LinearLayout(context);
         planeLayout.setBackgroundDrawable(shape);
-        planeLayout.setElevation(3);
+        planeLayout.setElevation(10);
         planeLayout.setClipToOutline(true);
 
         // emoji holder
@@ -67,14 +73,17 @@ public class ReactionBubbleCell extends RelativeLayout {
 
         // add individual emojis
         for (TLRPC.TL_availableReaction reaction : availableReactions) {
-            if (info.available_reactions.contains(reaction.reaction)) {
+            // allow all emoji for PMs
+            if (info == null || info.available_reactions.contains(reaction.reaction)) {
                 TLRPC.Document emojiAnimation = reaction.select_animation;
 
-                ReactionEmojiCell cell = new ReactionEmojiCell(context, emojiSize);
-                cell.setSticker(emojiAnimation, emojiHolder);
+                ReactionEmojiCell cell = new ReactionEmojiCell(context, emojiSize, false);
+                cell.setSticker(emojiAnimation, emojiHolder, 0.25f, 500);
                 cell.setScaled(true);
                 cell.setOnClickListener((view -> cell.playOnce()));
                 emojiHolder.addView(cell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+
+                totalEmojis++;
             }
         }
 
@@ -82,9 +91,13 @@ public class ReactionBubbleCell extends RelativeLayout {
         planeLayout.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
         addView(planeLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
-        float finalSize = AndroidUtilities.dp(Math.min(info.available_reactions.size()*emojiSize + 2*sidePadding, 300));
+        finalWidth = AndroidUtilities.dp(Math.min(totalEmojis*emojiSize + 2*sidePadding, maxAllowedWidth));
 
-        slideView(scrollView, 0, Math.round(finalSize));
+        slideView(scrollView, 0, finalWidth);
+    }
+
+    public int getFinalWidth() {
+        return finalWidth;
     }
 
     public static void slideView(View view, int currentHeight, int newHeight) {
@@ -94,8 +107,7 @@ public class ReactionBubbleCell extends RelativeLayout {
                 .setDuration(ChatListItemAnimator.DEFAULT_DURATION); // was 220-250
 
         slideAnimator.addUpdateListener(animation1 -> {
-            Integer value = (Integer) animation1.getAnimatedValue();
-            view.getLayoutParams().width = value;
+            view.getLayoutParams().width = (Integer) animation1.getAnimatedValue();
             view.requestLayout();
         });
 

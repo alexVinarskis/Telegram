@@ -808,7 +808,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     // dev alex
     private boolean showReactionToolbar = false;
-    ActionBarPopupWindow.ActionBarPopupWindowLayout ReactionToolbar;
+    private ReactionBubbleCell reactionBubbleCell;
 
     private ArrayList<TLRPC.TL_availableReaction> availableReactions;
 
@@ -20264,10 +20264,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             // inject emoji selector
             if (showReactionToolbar) {
                 // generate emoji layout
-                ReactionBubbleCell bubbleCell = new ReactionBubbleCell(getParentActivity(), availableReactions, chatInfo);
+                reactionBubbleCell = new ReactionBubbleCell(getParentActivity(), availableReactions, chatInfo);
                 // force-set window to fixed size, in order to be able to open next panel nicely
                 // MOVED
-                scrimPopupContainerLayout.addView(bubbleCell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
+                scrimPopupContainerLayout.addView(reactionBubbleCell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
                 scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, -8, 32, 0));
             } else {
                 scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, showMessageSeen ? -8 : 0, 0, 0));
@@ -20328,15 +20328,25 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             scrimPopupWindow.setAnimationStyle(R.style.PopupContextAnimation);
             scrimPopupWindow.setFocusable(true);
             scrimPopupContainerLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
-//            if (showMessageSeen & showReactionToolbar) popupLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(250), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
             scrimPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
             scrimPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
             scrimPopupWindow.getContentView().setFocusableInTouchMode(true);
             popupLayout.setFitItems(true);
 
-            if (messageSeenView != null) {
+
+            // add left margin bypass
+            if (showReactionToolbar && reactionBubbleCell != null && scrimPopupContainerLayout.getMeasuredWidth() < (reactionBubbleCell.getFinalWidth() + AndroidUtilities.dp(2*8))) {
+                int dX = reactionBubbleCell.getFinalWidth() + AndroidUtilities.dp(2*8) - scrimPopupContainerLayout.getMeasuredWidth();
+
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) popupLayout.getLayoutParams();
+                params.setMargins(dX, params.topMargin, params.rightMargin, params.bottomMargin);
+                popupLayout.setLayoutParams(params);
+            }
+            // skip equalizing view to avoid adding margin twice!
+            if (messageSeenView != null && !showReactionToolbar) {
                 messageSeenView.getLayoutParams().width = scrimPopupContainerLayout.getMeasuredWidth() - AndroidUtilities.dp(16);
             }
+
             int popupX = v.getLeft() + (int) x - scrimPopupContainerLayout.getMeasuredWidth() + backgroundPaddings.left - AndroidUtilities.dp(28);
             if (popupX < AndroidUtilities.dp(6)) {
                 popupX = AndroidUtilities.dp(6);
