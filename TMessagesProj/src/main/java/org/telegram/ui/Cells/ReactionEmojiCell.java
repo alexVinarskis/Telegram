@@ -47,6 +47,11 @@ public class ReactionEmojiCell extends FrameLayout {
     private boolean recent;
     private static AccelerateInterpolator interpolator = new AccelerateInterpolator(0.5f);
 
+    private float playProbability;
+    private long playProbabilityInterval;
+
+    private String reactionTitle;
+
     public ReactionEmojiCell(Context context, int size, boolean autoStart) {
         super(context);
 
@@ -109,7 +114,7 @@ public class ReactionEmojiCell extends FrameLayout {
     public void setSticker(TLRPC.Document document, Object parent) {
         setSticker(document, parent, 0,0);
     }
-    public void setSticker(TLRPC.Document document, Object parent, float probability, long timeFrameMs) {
+    public void setSticker(TLRPC.Document document, Object parent, float playProbability, long playProbabilityInterval) {
         if (document != null) {
             sticker = document;
             parentObject = parent;
@@ -126,15 +131,9 @@ public class ReactionEmojiCell extends FrameLayout {
                     imageView.setImage(ImageLocation.getForDocument(document), "66_66", null, null, parentObject);
                 }
                 // set autoplay if got params to do so
-                if (probability != 0 && timeFrameMs != 0) {
-                    RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
-                    if (drawable != null) drawable.setCurrentFrame(0);
-
-                    int attemptsToShow = (int) (1/probability);
-                    long timeToShow =  new Random().nextInt(Math.round(attemptsToShow))*timeFrameMs;
-                    if (timeFrameMs == 0) playOnce();
-                    else new Handler().postDelayed(this::playOnce, timeToShow);
-                };
+                this.playProbabilityInterval = playProbabilityInterval;
+                this.playProbability = playProbability;
+                restartPlayOnce();
 
             } else {
                 if (svgThumb != null) {
@@ -171,6 +170,17 @@ public class ReactionEmojiCell extends FrameLayout {
         if (drawable != null) {
             drawable.start();
             drawable.restart();
+        }
+    }
+    public void restartPlayOnce() {
+        if (playProbability != 0 && playProbabilityInterval != 0) {
+            RLottieDrawable drawable = imageView.getImageReceiver().getLottieAnimation();
+            if (drawable != null) drawable.setCurrentFrame(0);
+
+            int attemptsToShow = (int) (1/playProbability);
+            long timeToShow =  new Random().nextInt(Math.round(attemptsToShow))*playProbabilityInterval;
+            if (playProbabilityInterval == 0) playOnce();
+            else new Handler().postDelayed(this::playOnce, timeToShow);
         }
     }
 
@@ -242,5 +252,12 @@ public class ReactionEmojiCell extends FrameLayout {
         }
         info.setContentDescription(descr);
         info.setEnabled(true);
+    }
+
+    public void setReactionTitle(String reaction) {
+        this.reactionTitle = reaction;
+    }
+    public String getReactionTitle() {
+        return reactionTitle;
     }
 }

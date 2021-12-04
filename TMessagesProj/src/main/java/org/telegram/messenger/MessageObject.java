@@ -24,6 +24,7 @@ import android.text.style.ClickableSpan;
 import android.text.style.URLSpan;
 import android.text.util.Linkify;
 import android.util.Base64;
+import android.util.Log;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.browser.Browser;
@@ -2106,10 +2107,13 @@ public class MessageObject {
         }
     }
 
+
     public static void updateReactions(TLRPC.Message message, TLRPC.TL_messageReactions reactions) {
         if (message == null || reactions == null) {
             return;
         }
+        // Todo: finish implementing weird ass thing if MIN=true?
+        Log.e("DB", "updateReactions called! min: " + (reactions.min ? "true" : "false"));
         if (reactions.min && message.reactions != null) {
             for (int a = 0, N = message.reactions.results.size(); a < N; a++) {
                 TLRPC.TL_reactionCount reaction = message.reactions.results.get(a);
@@ -2118,6 +2122,7 @@ public class MessageObject {
                         TLRPC.TL_reactionCount newReaction = reactions.results.get(b);
                         if (reaction.reaction.equals(newReaction.reaction)) {
                             newReaction.chosen = true;
+                            Log.e("DB", "unknown updateReactions called! - new reaction was set!");
                             break;
                         }
                     }
@@ -2126,11 +2131,44 @@ public class MessageObject {
             }
         }
         message.reactions = reactions;
-        message.flags |= 1048576;
     }
+//    public static void updateReactions(TLRPC.Message message, TLRPC.TL_messageReactions reactions) {
+//        Log.e("DB", "unknown updateReactions called!");
+//        if (message == null || reactions == null) {
+//            return;
+//        }
+//        if (reactions.min && message.reactions != null) {
+//            for (int a = 0, N = message.reactions.results.size(); a < N; a++) {
+//                TLRPC.TL_reactionCount reaction = message.reactions.results.get(a);
+//                if (reaction.chosen) {
+//                    for (int b = 0, N2 = reactions.results.size(); b < N2; b++) {
+//                        TLRPC.TL_reactionCount newReaction = reactions.results.get(b);
+//                        if (reaction.reaction.equals(newReaction.reaction)) {
+//                            newReaction.chosen = true;
+//                            Log.e("DB", "unknown updateReactions called! - new reaction was set!");
+//                            break;
+//                        }
+//                    }
+//                    break;
+//                }
+//            }
+//        }
+//        message.reactions = reactions;
+//        message.flags |= 1048576;
+//    }
 
     public boolean hasReactions() {
         return messageOwner.reactions != null && !messageOwner.reactions.results.isEmpty();
+    }
+    // dev alex
+    public String getChosenReaction() {
+        if (messageOwner.reactions == null || messageOwner.reactions.results.isEmpty() || messageOwner.reactions.min) {
+            return null;
+        }
+        for (TLRPC.TL_reactionCount reaction : messageOwner.reactions.results) {
+            if (reaction.chosen) return reaction.reaction;
+        }
+        return null;
     }
 
     public static void updatePollResults(TLRPC.TL_messageMediaPoll media, TLRPC.PollResults results) {
@@ -2346,6 +2384,7 @@ public class MessageObject {
         message.peer_id = messageOwner.peer_id;
         message.out = messageOwner.out;
         message.from_id = messageOwner.from_id;
+        message.reactions = messageOwner.reactions;
         return new MessageObject(currentAccount, message, false, true);
     }
 

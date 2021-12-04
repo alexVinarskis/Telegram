@@ -47,6 +47,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -83,6 +84,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -168,6 +170,7 @@ import org.telegram.ui.Cells.ContextLinkCell;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.Cells.MentionCell;
 import org.telegram.ui.Cells.ReactionBubbleCell;
+import org.telegram.ui.Cells.ReactionEmojiCell;
 import org.telegram.ui.Cells.StickerCell;
 import org.telegram.ui.Cells.TextSelectionHelper;
 import org.telegram.ui.Components.AlertsCreator;
@@ -806,9 +809,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private PinchToZoomHelper pinchToZoomHelper;
     private EmojiAnimationsOverlay emojiAnimationsOverlay;
 
-    // dev alex
+    // dev alex vars
     private boolean showReactionToolbar = false;
     private ReactionBubbleCell reactionBubbleCell;
+    private long doubleClickDelay = 150;
+    private Handler doubleClickHanler = null;
 
     private ArrayList<TLRPC.TL_availableReaction> availableReactions;
 
@@ -1288,6 +1293,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         });
     }
 
+
     RecyclerListView.OnItemClickListenerExtended onItemClickListener = new RecyclerListView.OnItemClickListenerExtended() {
         @Override
         public void onItemClick(View view, int position, float x, float y) {
@@ -1303,7 +1309,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 processRowSelect(view, outside, x, y);
                 return;
             }
-            createMenu(view, true, false, x, y);
+            // alex dev adapt for double press
+            createMenu(view, true, false, x, y, true, true);
         }
     };
 
@@ -1536,6 +1543,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         getNotificationCenter().addObserver(this, NotificationCenter.channelRightsUpdated);
         getNotificationCenter().addObserver(this, NotificationCenter.audioRecordTooShort);
         getNotificationCenter().addObserver(this, NotificationCenter.didUpdateReactions);
+        getNotificationCenter().addObserver(this, NotificationCenter.didUpdateReactionsAlex);
         getNotificationCenter().addObserver(this, NotificationCenter.videoLoadingStateChanged);
         getNotificationCenter().addObserver(this, NotificationCenter.scheduledMessagesUpdated);
         getNotificationCenter().addObserver(this, NotificationCenter.diceStickersDidLoad);
@@ -1840,6 +1848,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         getNotificationCenter().removeObserver(this, NotificationCenter.audioRecordTooShort);
         getNotificationCenter().removeObserver(this, NotificationCenter.didUpdatePollResults);
         getNotificationCenter().removeObserver(this, NotificationCenter.didUpdateReactions);
+        getNotificationCenter().removeObserver(this, NotificationCenter.didUpdateReactionsAlex);
         getNotificationCenter().removeObserver(this, NotificationCenter.chatOnlineCountDidLoad);
         getNotificationCenter().removeObserver(this, NotificationCenter.videoLoadingStateChanged);
         getNotificationCenter().removeObserver(this, NotificationCenter.scheduledMessagesUpdated);
@@ -15041,6 +15050,19 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     chatAdapter.updateRowWithMessageObject(messageObject, true);
                 }
             }
+        // dev alex
+        // Todo: must update UI, local cache!
+        } else if (id == NotificationCenter.didUpdateReactionsAlex) {
+            long did = (Long) args[0];
+            if (did == dialog_id || did == mergeDialogId) {
+                int msgId = (Integer) args[1];
+                MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
+                if (messageObject != null) {
+                    MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
+                    messageObject.measureInlineBotButtons();
+                    chatAdapter.updateRowWithMessageObject(messageObject, true);
+                }
+            }
         } else if (id == NotificationCenter.didVerifyMessagesStickers) {
             ArrayList<TLRPC.Message> messages = (ArrayList<TLRPC.Message>) args[0];
             for (int a = 0, N = messages.size(); a < N; a++) {
@@ -19415,6 +19437,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     private void createMenu(View v, boolean single, boolean listView, float x, float y, boolean searchGroup) {
+        createMenu(v, single, listView, x, y, searchGroup, false);
+    }
+
+    private void createMenu(View v, boolean single, boolean listView, float x, float y, boolean searchGroup, boolean directClick) {
         if (actionBar.isActionModeShowed() || reportType >= 0) {
             return;
         }
@@ -19494,6 +19520,45 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         }
         if (message.isSponsored() || threadMessageObjects != null && threadMessageObjects.contains(message)) {
             single = true;
+        }
+
+        // alex dev - check to optimize for delay here
+        // determine if reaction toolbar should show at first place
+        showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError() && !isSecretChat();
+        // overwrite to false if there are no allowed emoji for this CHAT/CHANNEL
+        if (chatInfo != null && chatInfo.available_reactions.isEmpty()) showReactionToolbar = false;
+        if (showReactionToolbar && directClick) {
+            // if pressed on message & raection are possible - allow double press mode
+            if (doubleClickHanler == null) {
+                // first click
+                doubleClickHanler = new Handler();
+                doubleClickHanler.postDelayed(() -> {
+                    doubleClickHanler = null;
+                    // relaunch and bypass this whole loop
+                    createMenu(v, true, listView, x, y, searchGroup);
+                }, doubleClickDelay);
+                // quit
+                return;
+            } else {
+                // second click before 1st expired - double click; CANCEL first click pending
+                doubleClickHanler.removeCallbacksAndMessages(null);
+                doubleClickHanler = null;
+                // do DOUBLE CLICK
+                if (message.getChosenReaction() != null) {
+                    // 1. if any emoji - remove it;
+                    Log.e("DB", "removing emojj");
+                    getSendMessagesHelper().sendReaction(message, message.getChosenReaction(), ChatActivity.this, true);
+                } else if (currentChat == null || chatInfo.available_reactions.contains("❤")) {
+                    // 2. send heart
+                    Log.e("DB", "semnding heart ");
+                    getSendMessagesHelper().sendReaction(message, "❤", ChatActivity.this);
+                } else if (chatInfo.available_reactions.contains("\uD83D\uDC4D")) {
+                    // 3. send thumbs
+                    Log.e("DB", "semnding thumbs ");
+                    getSendMessagesHelper().sendReaction(message, "\uD83D\uDC4D", ChatActivity.this);
+                }
+                return;
+            }
         }
 
         selectedObject = null;
@@ -19982,10 +20047,28 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             boolean showMessageSeen = currentChat != null && message.isOutOwner() && message.isSent() && !message.isEditing() && !message.isSending() && !message.isSendError() && !message.isContentUnread() && !message.isUnread() && (ConnectionsManager.getInstance(currentAccount).getCurrentTime() - message.messageOwner.date < 7 * 86400)  && (ChatObject.isMegagroup(currentChat) || !ChatObject.isChannel(currentChat)) && chatInfo != null && chatInfo.participants_count < 50 && !(message.messageOwner.action instanceof TLRPC.TL_messageActionChatJoinedByRequest);
             MessageSeenView messageSeenView = null;
 
-            // determine if reaction toolbar should show at first place
-            showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError();// && chatInfo != null;// && !(message.messageOwner.action instanceof TLRPC.TL_messageActionChatJoinedByRequest);
-            // overwrite to false if there are no allowed emoji for this CHAT/CHANNEL
-            if (chatInfo != null && chatInfo.available_reactions.isEmpty()) showReactionToolbar = false;
+            // MOVED UP
+//            // determine if reaction toolbar should show at first place
+//            showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError();
+//            // overwrite to false if there are no allowed emoji for this CHAT/CHANNEL
+//            if (chatInfo != null && chatInfo.available_reactions.isEmpty()) showReactionToolbar = false;
+//            // determine, if somone has reacted, and custom showMessageSeen shall be shown
+//            if (showReactionToolbar) {
+//                Log.e("DB", "availableReactions count: " + message.hasReactions() + " " + message.messageOwner.reactions);
+//
+//                TLRPC.TL_messages_getMessageReactionsList req = new TLRPC.TL_messages_getMessageReactionsList();
+//                req.peer = getMessagesController().getInputPeer(dialog_id);
+//                req.id = message.getId();
+//                req.limit = 100;
+//                // req.flags = (req.flags | 1);    // allow filtering
+//                // req.flags = (req.flags | 2);    // allow offset
+//                getConnectionsManager().sendRequest(req, (response, error) -> {
+//                   if (response != null && response instanceof TLRPC.TL_messages_messageReactionsList) {
+//                       TLRPC.TL_messages_messageReactionsList availableReactionsList = ((TLRPC.TL_messages_messageReactionsList) response);
+//                       Log.e("DB", "availableReactions count: " + availableReactionsList.count);
+//                   }
+//                });
+//            }
 
             Rect rect = new Rect();
 
@@ -19999,14 +20082,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             scrimPopupWindowItems = new ActionBarMenuSubItem[items.size() + (selectedObject.isSponsored() ? 1 : 0)];
             // message seen view
             // main code
-            if (showMessageSeen) {
+            if (showMessageSeen && !showReactionToolbar) {
                 messageSeenView = new MessageSeenView(contentView.getContext(), currentAccount, message, currentChat);
                 Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.popup_fixed_alert).mutate();
                 shadowDrawable2.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
                 FrameLayout messageSeenLayout = new FrameLayout(contentView.getContext());
                 messageSeenLayout.addView(messageSeenView);
-                if (!showReactionToolbar)  messageSeenLayout.setBackground(shadowDrawable2);
-                else messageSeenLayout.setMinimumHeight(AndroidUtilities.dp(48));
+                messageSeenLayout.setBackground(shadowDrawable2);
                 MessageSeenView finalMessageSeenView = messageSeenView;
                 messageSeenView.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -20167,23 +20249,249 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         });
                     }
                 });
-                if (showReactionToolbar) {
-                    popupLayout.addView(messageSeenLayout);
 
-                    // spacer
-                    Drawable shadow = Theme.getThemedDrawable(getParentActivity(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow);
-                    Drawable background = new ColorDrawable(Theme.getColor(Theme.key_windowBackgroundGray));
-                    CombinedDrawable combinedDrawable = new CombinedDrawable(background, shadow, 0, 0);
-                    combinedDrawable.setFullsize(true);
-
-                    LinearLayout gap = new LinearLayout(getParentActivity());
-                    gap.setBackground(combinedDrawable);
-                    gap.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,AndroidUtilities.dp(8)));
-                    popupLayout.addView(gap);
-                } else {
-                    scrimPopupContainerLayout.addView(messageSeenLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 60));
-                }
+                scrimPopupContainerLayout.addView(messageSeenLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 60));
             }
+
+            // if - emoji toolbar is shown AND (showMessageSeen OR (its a GROUP message with reaction))
+            // this also determins if long press on  reactions button in the message is possible!
+            boolean showReactionsSeen = (showMessageSeen || (message.hasReactions() && currentChat != null && !(!currentChat.megagroup && ChatObject.isChannel(currentChat)))) && showReactionToolbar;
+            // custom return view
+            if (showReactionsSeen) {
+                messageSeenView = new MessageSeenView(contentView.getContext(), currentAccount, message, currentChat);
+                Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.popup_fixed_alert).mutate();
+                shadowDrawable2.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
+                FrameLayout messageSeenLayout = new FrameLayout(contentView.getContext());
+                messageSeenLayout.addView(messageSeenView);
+                messageSeenLayout.setMinimumHeight(AndroidUtilities.dp(48));
+                MessageSeenView finalMessageSeenView = messageSeenView;
+                messageSeenView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (scrimPopupWindow == null || finalMessageSeenView.users.isEmpty()) {
+                            return;
+                        }
+                        int totalHeight = contentView.getHeightWithKeyboard();
+                        int availableHeight = totalHeight - scrimPopupY - AndroidUtilities.dp(46 + 16);
+
+                        if (SharedConfig.messageSeenHintCount > 0 && contentView.getKeyboardHeight() < AndroidUtilities.dp(20)) {
+                            availableHeight -= AndroidUtilities.dp(52);
+                            Bulletin bulletin = BulletinFactory.of(ChatActivity.this).createErrorBulletin(AndroidUtilities.replaceTags(LocaleController.getString("MessageSeenTooltipMessage", R.string.MessageSeenTooltipMessage)));
+                            bulletin.tag = 1;
+                            bulletin.setDuration(4000);
+                            bulletin.show();
+                            SharedConfig.updateMessageSeenHintCount(SharedConfig.messageSeenHintCount - 1);
+                        } else if (contentView.getKeyboardHeight() > AndroidUtilities.dp(20)) {
+                            availableHeight -=contentView.getKeyboardHeight() / 3f;
+                        }
+
+                        View previousPopupContentView = popupLayout;
+//                        View previousPopupContentView = scrimPopupWindow.getContentView();
+
+                        ActionBarMenuSubItem cell = new ActionBarMenuSubItem(getParentActivity(), true, true, themeDelegate);
+                        cell.setItemHeight(44);
+                        cell.setTextAndIcon(LocaleController.getString("Back", R.string.Back), R.drawable.msg_arrow_back);
+                        cell.getTextView().setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(40), 0, LocaleController.isRTL ? AndroidUtilities.dp(40) : 0, 0);
+
+                        Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.popup_fixed_alert).mutate();
+                        shadowDrawable2.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
+                        FrameLayout backContainer = new FrameLayout(contentView.getContext());
+                        backContainer.setBackground(shadowDrawable2);
+
+                        LinearLayout linearLayout = new LinearLayout(contentView.getContext()) {
+                            @Override
+                            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                                super.onMeasure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(260), MeasureSpec.AT_MOST), heightMeasureSpec);
+                                setPivotX(getMeasuredWidth() - AndroidUtilities.dp(8));
+                                setPivotY(AndroidUtilities.dp(8));
+                            }
+
+                            @Override
+                            public boolean dispatchKeyEvent(KeyEvent event) {
+                                if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0 && scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
+                                    if (mesageSeenUsersPopupWindow != null) {
+                                        mesageSeenUsersPopupWindow.dismiss();
+                                    }
+                                }
+                                return super.dispatchKeyEvent(event);
+                            }
+                        };
+                        linearLayout.setOnTouchListener(new View.OnTouchListener() {
+
+                            private int[] pos = new int[2];
+
+                            @Override
+                            public boolean onTouch(View v, MotionEvent event) {
+                                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                                    if (mesageSeenUsersPopupWindow != null && mesageSeenUsersPopupWindow.isShowing()) {
+                                        View contentView = mesageSeenUsersPopupWindow.getContentView();
+                                        contentView.getLocationInWindow(pos);
+                                        rect.set(pos[0], pos[1], pos[0] + contentView.getMeasuredWidth(), pos[1] + contentView.getMeasuredHeight());
+                                        if (!rect.contains((int) event.getX(), (int) event.getY())) {
+                                            mesageSeenUsersPopupWindow.dismiss();
+                                        }
+                                    }
+                                } else if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE) {
+                                    if (mesageSeenUsersPopupWindow != null && mesageSeenUsersPopupWindow.isShowing()) {
+                                        mesageSeenUsersPopupWindow.dismiss();
+                                    }
+                                }
+                                return false;
+                            }
+                        });
+                        linearLayout.setOrientation(LinearLayout.VERTICAL);
+
+                        RecyclerListView listView = finalMessageSeenView.createListView();
+                        int listViewTotalHeight = AndroidUtilities.dp(8) + AndroidUtilities.dp(44) * listView.getAdapter().getItemCount() + AndroidUtilities.dp(16);
+
+//                        backContainer.addView(cell);
+//                        linearLayout.addView(backContainer);
+                        linearLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 0));
+
+                        if (listViewTotalHeight > availableHeight) {
+                            if (availableHeight > AndroidUtilities.dp(620)) {
+                                listView.getLayoutParams().height = AndroidUtilities.dp(620);
+                            } else {
+                                listView.getLayoutParams().height = availableHeight;
+                            }
+                        } else {
+                            listView.getLayoutParams().height = listViewTotalHeight;
+                        }
+
+                        Drawable shadowDrawable3 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.popup_fixed_alert).mutate();
+                        shadowDrawable3.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
+                        listView.setBackground(shadowDrawable3);
+                        boolean[] backButtonPressed = new boolean[1];
+
+                        // hide emoji bubble view
+                        reactionBubbleCell.animateOut();
+                        // get new coordinates
+                        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) popupLayout.getLayoutParams();
+                        int subScrimPopupX = scrimPopupX - lp.leftMargin;
+                        int subScrimPopupY = scrimPopupY;
+                        // dev custom layout
+                        ActionBarPopupWindow.ActionBarPopupWindowLayout subPopupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(getParentActivity(), R.drawable.popup_fixed_alert, themeDelegate) {
+                            @Override
+                            protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+                                super.onLayout(changed, left, top, right, bottom);
+                            }
+
+                            @Override
+                            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                                super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//                                setPivotX(getMeasuredWidth() - AndroidUtilities.dp(8));
+//                                setPivotY(AndroidUtilities.dp(8));
+
+                            }
+                        };
+                        subPopupLayout.setMinimumWidth(AndroidUtilities.dp(200));
+                        Rect backgroundPaddings = new Rect();
+                        Drawable shadowDrawable = getParentActivity().getResources().getDrawable(R.drawable.popup_fixed_alert).mutate();
+                        shadowDrawable.getPadding(backgroundPaddings);
+                        subPopupLayout.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                        // add header
+                        subPopupLayout.addView(cell);
+                        // spacer
+                        Drawable shadow = Theme.getThemedDrawable(getParentActivity(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow);
+                        Drawable background = new ColorDrawable(Theme.getColor(Theme.key_windowBackgroundGray));
+                        CombinedDrawable combinedDrawable = new CombinedDrawable(background, shadow, 0, 0);
+                        combinedDrawable.setFullsize(true);
+                        LinearLayout gap = new LinearLayout(getParentActivity());
+                        gap.setBackground(combinedDrawable);
+                        gap.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,AndroidUtilities.dp(8)));
+                        subPopupLayout.addView(gap);
+//                        subPopupLayout.getLayoutParams().width = scrimPopupContainerLayout.getMeasuredWidth();
+                        subPopupLayout.measure(View.MeasureSpec.makeMeasureSpec(scrimPopupContainerLayout.getMeasuredWidth(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
+
+
+                        mesageSeenUsersPopupWindow = new ActionBarPopupWindow(subPopupLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
+    //                        mesageSeenUsersPopupWindow = new ActionBarPopupWindow(linearLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
+                            @Override
+                            public void dismiss(boolean animated) {
+                                super.dismiss(animated);
+                                if (backButtonPressed[0]) {
+                                    linearLayout.animate().alpha(0).scaleX(0).scaleY(0).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+                                    previousPopupContentView.animate().alpha(1f).scaleX(1).scaleY(1).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+                                } else {
+                                    if (scrimPopupWindow != null) {
+                                        scrimPopupWindow.dismiss();
+
+                                        contentView.invalidate();
+                                        chatListView.invalidate();
+                                    }
+                                }
+                                if (Bulletin.getVisibleBulletin() != null && Bulletin.getVisibleBulletin().tag == 1) {
+                                    Bulletin.getVisibleBulletin().hide();
+                                }
+                                mesageSeenUsersPopupWindow = null;
+                            }
+                        };
+                        mesageSeenUsersPopupWindow.setOutsideTouchable(true);
+                        mesageSeenUsersPopupWindow.setClippingEnabled(true);
+                        mesageSeenUsersPopupWindow.setFocusable(true);
+                        mesageSeenUsersPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
+                        mesageSeenUsersPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
+                        mesageSeenUsersPopupWindow.getContentView().setFocusableInTouchMode(true);
+
+                        int[] pos = new int[2];
+                        popupLayout.getLocationOnScreen(pos);
+                        mesageSeenUsersPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, pos[0], pos[1]);
+
+                        mesageSeenUsersPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, subScrimPopupX, subScrimPopupY);
+//                        mesageSeenUsersPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, scrimPopupX, scrimPopupY);
+                        previousPopupContentView.setPivotX(AndroidUtilities.dp(8));
+                        previousPopupContentView.setPivotY(AndroidUtilities.dp(8));
+                        previousPopupContentView.animate().alpha(0).scaleX(0f).scaleY(0f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+
+                        linearLayout.setAlpha(0f);
+                        linearLayout.setScaleX(0f);
+                        linearLayout.setScaleY(0f);
+                        linearLayout.animate().alpha(1f).scaleX(1f).scaleY(1f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+
+                        cell.setMinimumHeight(messageSeenLayout.getMeasuredHeight());
+                        cell.setOnClickListener(new View.OnClickListener() {
+//                        backContainer.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                if (mesageSeenUsersPopupWindow != null) {
+                                    mesageSeenUsersPopupWindow.setEmptyOutAnimation(250);
+                                    backButtonPressed[0] = true;
+                                    mesageSeenUsersPopupWindow.dismiss(true);
+                                    reactionBubbleCell.animateIn();
+                                }
+                            }
+                        });
+
+                        listView.setOnItemClickListener((view1, position) -> {
+                            TLRPC.User user = finalMessageSeenView.users.get(position);
+                            if (user == null) {
+                                return;
+                            }
+                            Bundle args = new Bundle();
+                            args.putLong("user_id", user.id);
+                            ProfileActivity fragment = new ProfileActivity(args);
+                            presentFragment(fragment);
+                            if (mesageSeenUsersPopupWindow != null) {
+                                mesageSeenUsersPopupWindow.dismiss();
+                            }
+                        });
+                    }
+                });
+
+                popupLayout.addView(messageSeenLayout);
+
+                // spacer
+                Drawable shadow = Theme.getThemedDrawable(getParentActivity(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow);
+                Drawable background = new ColorDrawable(Theme.getColor(Theme.key_windowBackgroundGray));
+                CombinedDrawable combinedDrawable = new CombinedDrawable(background, shadow, 0, 0);
+                combinedDrawable.setFullsize(true);
+
+                LinearLayout gap = new LinearLayout(getParentActivity());
+                gap.setBackground(combinedDrawable);
+                gap.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,AndroidUtilities.dp(8)));
+                popupLayout.addView(gap);
+            }
+
 
             // main list
             for (int a = 0, N = items.size(); a < N; a++) {
@@ -20273,10 +20581,18 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             // inject emoji selector
             if (showReactionToolbar) {
                 // generate emoji layout
-                reactionBubbleCell = new ReactionBubbleCell(getParentActivity(), availableReactions, chatInfo);
-                // force-set window to fixed size, in order to be able to open next panel nicely
-                // MOVED
-                scrimPopupContainerLayout.addView(reactionBubbleCell, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT, 0, 0, 0, 0));
+                reactionBubbleCell = new ReactionBubbleCell(getParentActivity(), message, availableReactions, chatInfo, 64);
+                reactionBubbleCell.setDelegate(new ReactionBubbleCell.ReactionBubbleCellDelegate() {
+                    @Override
+                    public void didPressReaction(ReactionEmojiCell cell, MessageObject message, String reaction) {
+                        if (scrimPopupWindow != null) scrimPopupWindow.dismiss();
+                        getSendMessagesHelper().sendReaction(message, reaction, ChatActivity.this);
+                    }
+                });
+                // coat it in fram, to center vertically
+                FrameLayout subView = new FrameLayout(getParentActivity());
+                subView.addView(reactionBubbleCell, LayoutHelper.createFrameRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+                scrimPopupContainerLayout.addView(subView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 64, Gravity.RIGHT));
                 scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, -8, 32, 0));
             } else {
                 scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, showMessageSeen ? -8 : 0, 0, 0));

@@ -110,6 +110,7 @@ public class NotificationCenter {
     public static final int startAllHeavyOperations = totalEvents++;
     public static final int sendingMessagesChanged = totalEvents++;
     public static final int didUpdateReactions = totalEvents++;
+    public static final int didUpdateReactionsAlex = totalEvents++;
     public static final int didVerifyMessagesStickers = totalEvents++;
     public static final int scheduledMessagesUpdated = totalEvents++;
     public static final int newSuggestionsAvailable = totalEvents++;

@@ -11954,6 +11954,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         int timeYOffset;
+        // alex dev time is made here
+        if (currentChat == null) {
+            // PM mode - add reactions (if any) on the left of the time
+        }
         if (shouldDrawTimeOnMedia()) {
             timeYOffset = -(drawCommentButton ? AndroidUtilities.dp(41.3f) : 0);
             Paint paint;

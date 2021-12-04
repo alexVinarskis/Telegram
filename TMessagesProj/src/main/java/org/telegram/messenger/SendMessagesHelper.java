@@ -29,6 +29,7 @@ import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.util.Log;
 import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -2654,6 +2655,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendReaction(MessageObject messageObject, CharSequence reaction, ChatActivity parentFragment) {
+        sendReaction(messageObject, reaction, parentFragment, false);
+    }
+    public void sendReaction(MessageObject messageObject, CharSequence reaction, ChatActivity parentFragment, boolean delete) {
         if (messageObject == null || parentFragment == null) {
             return;
         }
@@ -2662,21 +2666,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         req.msg_id = messageObject.getId();
         if (reaction != null) {
             req.reaction = reaction.toString();
-            req.flags |= 1;
+            req.flags = delete ? (req.flags &~ 1) : (req.flags | 1);
         }
         getConnectionsManager().sendRequest(req, (response, error) -> {
             if (response != null) {
+                // P.S. no need to handle updateEditMessage/updateEditChannelMessage,
+                //      as it is followed by updateMessageReactions, which will
+                //      overwrite it anyway.
+                for (TLRPC.Update update : ((TLRPC.Updates) response).updates) {
+                    Log.e("DB", "got following update: " + update);
+                }
                 getMessagesController().processUpdates((TLRPC.Updates) response, false);
             }
-            /*AndroidUtilities.runOnUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    waitingForVote.remove(key);
-                    if (finishRunnable != null) {
-                        finishRunnable.run();
-                    }
-                }
-            });*/
         });
     }
 
