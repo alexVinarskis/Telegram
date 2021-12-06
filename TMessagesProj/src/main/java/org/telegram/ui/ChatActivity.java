@@ -20313,7 +20313,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
 //                        backContainer.addView(cell);
 //                        linearLayout.addView(backContainer);
-//                        linearLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 0));
+                        linearLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 0));
 
                         if (listViewTotalHeight > availableHeight) {
                             if (availableHeight > AndroidUtilities.dp(620)) {
