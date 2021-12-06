@@ -20313,7 +20313,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
 //                        backContainer.addView(cell);
 //                        linearLayout.addView(backContainer);
-                        linearLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 0));
+//                        linearLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 0));
 
                         if (listViewTotalHeight > availableHeight) {
                             if (availableHeight > AndroidUtilities.dp(620)) {
@@ -20367,9 +20367,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         gap.setBackground(combinedDrawable);
                         gap.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,AndroidUtilities.dp(8)));
                         subPopupLayout.addView(gap);
-//                        subPopupLayout.getLayoutParams().width = scrimPopupContainerLayout.getMeasuredWidth();
                         subPopupLayout.measure(View.MeasureSpec.makeMeasureSpec(scrimPopupContainerLayout.getMeasuredWidth(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
 
+                        // add main view
+                        // Todo:
 
                         mesageSeenUsersPopupWindow = new ActionBarPopupWindow(subPopupLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
     //                        mesageSeenUsersPopupWindow = new ActionBarPopupWindow(linearLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
@@ -20377,7 +20378,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             public void dismiss(boolean animated) {
                                 super.dismiss(animated);
                                 if (backButtonPressed[0]) {
-                                    linearLayout.animate().alpha(0).scaleX(0).scaleY(0).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+                                    subPopupLayout.animate().alpha(0).scaleX(0).scaleY(0).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
                                     previousPopupContentView.animate().alpha(1f).scaleX(1).scaleY(1).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
                                 } else {
                                     if (scrimPopupWindow != null) {
@@ -20410,10 +20411,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         previousPopupContentView.setPivotY(AndroidUtilities.dp(8));
                         previousPopupContentView.animate().alpha(0).scaleX(0f).scaleY(0f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
 
-                        linearLayout.setAlpha(0f);
-                        linearLayout.setScaleX(0f);
-                        linearLayout.setScaleY(0f);
-                        linearLayout.animate().alpha(1f).scaleX(1f).scaleY(1f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
+                        subPopupLayout.setAlpha(0f);
+                        subPopupLayout.setScaleX(0f);
+                        subPopupLayout.setScaleY(0f);
+                        subPopupLayout.animate().alpha(1f).scaleX(1f).scaleY(1f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(350);
 
                         cell.setMinimumHeight(messageSeenLayout.getMeasuredHeight());
                         cell.setOnClickListener(new View.OnClickListener() {

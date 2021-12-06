@@ -95,6 +95,11 @@ public class MessageSeenView extends FrameLayout {
         if (messageObject.hasReactions()) drawable = ContextCompat.getDrawable(context, isVoice ? R.drawable.msg_played : R.drawable.msg_reactions).mutate();
         else drawable = ContextCompat.getDrawable(context, isVoice ? R.drawable.msg_played : R.drawable.msg_seen).mutate();
 
+//        int counterReactions = 0;
+//        for (TLRPC.TL_reactionCount reaction : messageObject.messageOwner.reactions.results) {
+//            counterReactions+=reaction.count;
+//        }
+
         if (messageObject.messageOwner.reactions != null && messageObject.messageOwner.reactions.results != null) messageObject.messageOwner.reactions.results.size();
 
         drawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuItemIcon), PorterDuff.Mode.MULTIPLY));
