@@ -44,16 +44,12 @@ public class ReactionsEditActivity extends BaseFragment {
     private long chatId;
     private boolean isChannel;
 
-    private ArrayList<TLRPC.TL_availableReaction> availableReactions;
     private ArrayList<String> ogAvailableReactions;
 
-    public ReactionsEditActivity(long chatId, TLRPC.ChatFull info, ArrayList<TLRPC.TL_availableReaction> availableReactions) {
+    public ReactionsEditActivity(long chatId, TLRPC.ChatFull info) {
         this.chatId = chatId;
         this.info = info;
         this.ogAvailableReactions = new ArrayList<>(info.available_reactions);
-        if (availableReactions != null) {
-            this.availableReactions = availableReactions;
-        }
     }
 
     @Override
@@ -145,7 +141,7 @@ public class ReactionsEditActivity extends BaseFragment {
                 emojiButton.setChecked(true, false);
             }
             info.available_reactions.clear();
-            for (TLRPC.TL_availableReaction reaction : availableReactions) {
+            for (TLRPC.TL_availableReaction reaction : ReactionController.getAvailableReactions()) {
                 info.available_reactions.add(reaction.reaction);
             }
             // animate list
@@ -252,13 +248,13 @@ public class ReactionsEditActivity extends BaseFragment {
 
         emojiButtons = new ArrayList<>();
 
-        if (availableReactions != null) {
-            for (int i = 0; i < availableReactions.size(); i++) {
-                TLRPC.TL_availableReaction reaction = availableReactions.get(i);
+        if (ReactionController.getAvailableReactions() != null) {
+            for (int i = 0; i < ReactionController.getAvailableReactionsSize(); i++) {
+                TLRPC.TL_availableReaction reaction = ReactionController.getAvailableReactions().get(i);
 
                 EmojiTextCell emojiSwitch = new EmojiTextCell(context);
                 emojiSwitch.setBackgroundDrawable(Theme.getSelectorDrawable(false));
-                emojiSwitch.setTextAndValueAndIcon(reaction.title, reaction.select_animation, checkAllowedEmoji(reaction), i != availableReactions.size() - 1);
+                emojiSwitch.setTextAndValueAndIcon(reaction.title, reaction.select_animation, checkAllowedEmoji(reaction), i != ReactionController.getAvailableReactionsSize() - 1);
                 emojiSwitch.setOnClickListener(v -> {
                     toggleEnableEmoji(reaction, emojiSwitch);
                 });

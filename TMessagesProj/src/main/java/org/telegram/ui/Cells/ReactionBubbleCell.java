@@ -33,6 +33,7 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.ReactionController;
 
 import java.util.ArrayList;
 
@@ -53,7 +54,7 @@ public class ReactionBubbleCell extends RelativeLayout {
         }
     }
 
-    public ReactionBubbleCell(Context context, MessageObject message, ArrayList<TLRPC.TL_availableReaction> availableReactions, TLRPC.ChatFull info, int totalHeight) {
+    public ReactionBubbleCell(Context context, MessageObject message, TLRPC.ChatFull info, int totalHeight) {
         super(context);
 
         this.message = message;
@@ -105,7 +106,7 @@ public class ReactionBubbleCell extends RelativeLayout {
         scrollView.addView(emojiHolder, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL));
 
         // add individual emojis
-        for (TLRPC.TL_availableReaction reaction : availableReactions) {
+        for (TLRPC.TL_availableReaction reaction : ReactionController.getAvailableReactions()) {
             // allow all emoji for PMs
             if (info == null || info.available_reactions.contains(reaction.reaction)) {
                 TLRPC.Document emojiAnimation = reaction.select_animation;

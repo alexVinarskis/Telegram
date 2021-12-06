@@ -140,8 +140,6 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
     private final static int done_button = 1;
 
-    private ArrayList<TLRPC.TL_availableReaction> availableReactions;
-
     private PhotoViewer.PhotoViewerProvider provider = new PhotoViewer.EmptyPhotoViewerProvider() {
 
         @Override
@@ -188,13 +186,6 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
     public ChatEditActivity(Bundle args) {
         super(args);
-        avatarDrawable = new AvatarDrawable();
-        imageUpdater = new ImageUpdater(true);
-        chatId = args.getLong("chat_id", 0);
-    }
-    public ChatEditActivity(Bundle args, ArrayList<TLRPC.TL_availableReaction>  availableReactions) {
-        super(args);
-        this.availableReactions = availableReactions;
         avatarDrawable = new AvatarDrawable();
         imageUpdater = new ImageUpdater(true);
         chatId = args.getLong("chat_id", 0);
@@ -827,7 +818,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         reactionsCell = new TextCell(context);
         reactionsCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
         reactionsCell.setOnClickListener(v -> {
-            ReactionsEditActivity activity = new ReactionsEditActivity(chatId, info, availableReactions);
+            ReactionsEditActivity activity = new ReactionsEditActivity(chatId, info);
             presentFragment(activity);
         });
 
@@ -1019,7 +1010,6 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.chatInfoDidLoad || id == NotificationCenter.chatInfoDidLoadAlex) {
-            Log.e("DB","GOT chatInfo updates");
             TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
             if (chatFull.id == chatId) {
                 Log.e("DB","DECODING chatInfo updates.. size: " + chatFull.available_reactions.size());
@@ -1479,10 +1469,10 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 reactionsCell.setVisibility(View.GONE);
             } else {
                 int numReactions = info.available_reactions.size();
-                if (availableReactions != null && !availableReactions.isEmpty()) {
+                if (ReactionController.getAvailableReactions() != null) {
                     // reuse from cache
                     Log.e("DB","Reusing from cache");
-                    int totalReactions = availableReactions.size();
+                    int totalReactions = ReactionController.getAvailableReactionsSize();
 
                     if (numReactions > 0) {
                         reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), numReactions + "/" + totalReactions, R.drawable.actions_reactions, true);
@@ -1490,29 +1480,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                         reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), LocaleController.getString("ReactionsSwitchOff", R.string.ReactionsSwitchOff), R.drawable.actions_reactions, true);
                     }
                 } else {
-                    // set place holder
+                    // set place holder; SHOULDN'T EVER HAPPEN
                     reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), numReactions + "/" + Math.max(numReactions, 11), R.drawable.actions_reactions, true);
                     // pull from backend on UI THREAD - ON/ON instead of ON/AVAILABLE
-                    TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
-                    req.hash = 0;
-                    getConnectionsManager().sendRequest(req, (response, error) -> {
-                        if (error != null) {
-                            Log.e("DB", "Error pulling all emoji: " + error);
-                            return;
-                        }
-                        if (response instanceof TLRPC.TL_messages_availableReactions) {
-                            // save possible reactions
-                            availableReactions = ((TLRPC.TL_messages_availableReactions) response).reactions;
-                            // update numbers
-                            int totalReactions = availableReactions.size();
-                            // update UI
-                            if (numReactions > 0) {
-                                AndroidUtilities.runOnUIThread(() -> reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), numReactions + "/" + totalReactions, R.drawable.actions_reactions, true));
-                            } else {
-                                AndroidUtilities.runOnUIThread(() -> reactionsCell.setTextAndValueAndIcon(LocaleController.getString("ReactionsSwitch", R.string.ReactionsSwitch), LocaleController.getString("ReactionsSwitchOff", R.string.ReactionsSwitchOff), R.drawable.actions_reactions, true));
-                            }
-                        }
-                    });
                 }
             }
         }

@@ -134,6 +134,10 @@ public class MessagesController extends BaseController implements NotificationCe
     private int pollsToCheckSize;
     private long lastViewsCheckTime;
 
+    private LongSparseArray<ArrayList<MessageObject>> messageReactionsToCheck = new LongSparseArray<>();
+    private int messageReactionsToCheckSize;
+    private long lastReactionsCheckTime;
+
     public ArrayList<DialogFilter> dialogFilters = new ArrayList<>();
     public SparseArray<DialogFilter> dialogFiltersById = new SparseArray<>();
     private boolean loadingSuggestedFilters;
@@ -5243,6 +5247,9 @@ public class MessagesController extends BaseController implements NotificationCe
         checkDeletingTask(false);
         checkReadTasks();
 
+        Log.e("DB", "Updater called!");
+
+
         if (getUserConfig().isClientActivated()) {
             if (!ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
@@ -5370,6 +5377,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 channelViewsToSend.clear();
             }
             if (pollsToCheckSize > 0) {
+                Log.e("DB", "Called update POLLS");
                 AndroidUtilities.runOnUIThread(() -> {
                     long time = SystemClock.elapsedRealtime();
                     int minExpireTime = Integer.MAX_VALUE;

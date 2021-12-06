@@ -815,8 +815,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private long doubleClickDelay = 150;
     private Handler doubleClickHanler = null;
 
-    private ArrayList<TLRPC.TL_availableReaction> availableReactions;
-
     private interface ChatActivityDelegate {
         default void openReplyMessage(int mid) {
 
@@ -1707,21 +1705,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         }
 
         // dev alex
-        if (!(availableReactions != null && !availableReactions.isEmpty())) {
-            TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
-            req.hash = 0;
-            getConnectionsManager().sendRequest(req, (response, error)  -> {
-                if (error != null) {
-                    android.util.Log.e("DB", "MAIN: Error pulling all emoji: " + error);
-                    return;
-                }
-                if (response instanceof TLRPC.TL_messages_availableReactions) {
-                    // save possible reactions
-                    android.util.Log.e("DB", "MAIN: updating emoji available");
-                    availableReactions = ((TLRPC.TL_messages_availableReactions) response).reactions;
-                }
-            });
-        }
+        ReactionController.init(this);
         return true;
     }
 
@@ -11181,6 +11165,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     public void updateMessagesVisiblePart(boolean inLayout) {
+        Log.e("DB", "Updated visible messages part");
         if (chatListView == null) {
             return;
         }
@@ -17164,7 +17149,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else if (fragment instanceof ChatEditActivity) {
                     Bundle args = new Bundle();
                     args.putLong("chat_id", channelId);
-                    actionBarLayout.addFragmentToStack(new ChatEditActivity(args, availableReactions), a);
+                    actionBarLayout.addFragmentToStack(new ChatEditActivity(args), a);
                     fragment.removeSelfFromStack();
                 } else if (fragment instanceof ChatUsersActivity) {
                     ChatUsersActivity usersActivity = (ChatUsersActivity) fragment;
@@ -19524,7 +19509,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
         // alex dev - check to optimize for delay here
         // determine if reaction toolbar should show at first place
-        showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError() && !isSecretChat();
+        showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError() && !isSecretChat() && !message.isSponsored();
         // overwrite to false if there are no allowed emoji for this CHAT/CHANNEL
         if (chatInfo != null && chatInfo.available_reactions.isEmpty()) showReactionToolbar = false;
         if (showReactionToolbar && directClick) {
@@ -20047,29 +20032,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             boolean showMessageSeen = currentChat != null && message.isOutOwner() && message.isSent() && !message.isEditing() && !message.isSending() && !message.isSendError() && !message.isContentUnread() && !message.isUnread() && (ConnectionsManager.getInstance(currentAccount).getCurrentTime() - message.messageOwner.date < 7 * 86400)  && (ChatObject.isMegagroup(currentChat) || !ChatObject.isChannel(currentChat)) && chatInfo != null && chatInfo.participants_count < 50 && !(message.messageOwner.action instanceof TLRPC.TL_messageActionChatJoinedByRequest);
             MessageSeenView messageSeenView = null;
 
-            // MOVED UP
-//            // determine if reaction toolbar should show at first place
-//            showReactionToolbar = message.messageOwner.action == null && !message.scheduled && !message.isEditing() && !message.isSending() && !message.isSendError();
-//            // overwrite to false if there are no allowed emoji for this CHAT/CHANNEL
-//            if (chatInfo != null && chatInfo.available_reactions.isEmpty()) showReactionToolbar = false;
-//            // determine, if somone has reacted, and custom showMessageSeen shall be shown
-//            if (showReactionToolbar) {
-//                Log.e("DB", "availableReactions count: " + message.hasReactions() + " " + message.messageOwner.reactions);
-//
-//                TLRPC.TL_messages_getMessageReactionsList req = new TLRPC.TL_messages_getMessageReactionsList();
-//                req.peer = getMessagesController().getInputPeer(dialog_id);
-//                req.id = message.getId();
-//                req.limit = 100;
-//                // req.flags = (req.flags | 1);    // allow filtering
-//                // req.flags = (req.flags | 2);    // allow offset
-//                getConnectionsManager().sendRequest(req, (response, error) -> {
-//                   if (response != null && response instanceof TLRPC.TL_messages_messageReactionsList) {
-//                       TLRPC.TL_messages_messageReactionsList availableReactionsList = ((TLRPC.TL_messages_messageReactionsList) response);
-//                       Log.e("DB", "availableReactions count: " + availableReactionsList.count);
-//                   }
-//                });
-//            }
-
             Rect rect = new Rect();
 
             ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(getParentActivity(), R.drawable.popup_fixed_alert, themeDelegate);
@@ -20581,7 +20543,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             // inject emoji selector
             if (showReactionToolbar) {
                 // generate emoji layout
-                reactionBubbleCell = new ReactionBubbleCell(getParentActivity(), message, availableReactions, chatInfo, 64);
+                reactionBubbleCell = new ReactionBubbleCell(getParentActivity(), message, chatInfo, 64);
                 reactionBubbleCell.setDelegate(new ReactionBubbleCell.ReactionBubbleCellDelegate() {
                     @Override
                     public void didPressReaction(ReactionEmojiCell cell, MessageObject message, String reaction) {
@@ -23304,7 +23266,14 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
                     @Override
                     public void didPressReaction(ChatMessageCell cell, TLRPC.TL_reactionCount reaction) {
-                        getSendMessagesHelper().sendReaction(cell.getMessageObject(), reaction.reaction, ChatActivity.this);
+                        boolean delete = false;
+                        if (cell.getMessageObject().getChosenReaction() != null && cell.getMessageObject().getChosenReaction().equals(reaction.reaction)) delete = true;
+                        getSendMessagesHelper().sendReaction(cell.getMessageObject(), reaction.reaction, ChatActivity.this, delete);
+                    }
+                    @Override
+                    public boolean didLongPressReaction(ChatMessageCell cell, TLRPC.TL_reactionCount reaction) {
+                        // Todo: finish popup
+                        return true;
                     }
 
                     @Override
