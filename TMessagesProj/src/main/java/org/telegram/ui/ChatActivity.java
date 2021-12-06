@@ -456,6 +456,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private int scrollToOffsetOnRecreate = 0;
 
     private ArrayList<MessageObject> pollsToCheck = new ArrayList<>(10);
+    private ArrayList<MessageObject> messageReactionsToCheck = new ArrayList<>(20);
 
     private int editTextStart;
     private int editTextEnd;
@@ -11165,7 +11166,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     public void updateMessagesVisiblePart(boolean inLayout) {
-        Log.e("DB", "Updated visible messages part");
         if (chatListView == null) {
             return;
         }
@@ -11198,6 +11198,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         int maxUnreadDate = Integer.MIN_VALUE;
         int recyclerChatViewHeight = (contentView.getHeightWithKeyboard() - (inPreviewMode ? 0 : AndroidUtilities.dp(48)) - chatListView.getTop());
         pollsToCheck.clear();
+        messageReactionsToCheck.clear();
         float cilpTop = chatListViewPaddingTop;
         for (int a = 0; a < count; a++) {
             View view = chatListView.getChildAt(a);
@@ -11281,6 +11282,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (messageObject.type == MessageObject.TYPE_POLL && messageObject.getId() > 0) {
                     pollsToCheck.add(messageObject);
                 }
+                if (messageObject.messageOwner.reactions != null) {
+                    messageReactionsToCheck.add(messageObject);
+                }
             }
             if (bottom <= cilpTop) {
                 if (view instanceof ChatActionCell && messageObject.isDateObject) {
@@ -11344,6 +11348,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
         }
         getMessagesController().addToPollsQueue(dialog_id, pollsToCheck);
+        getMessagesController().addToMessageReactionsQueue(dialog_id, messageReactionsToCheck);
         if (videoPlayerContainer != null) {
             if (!foundTextureViewMessage) {
                 MessageObject messageObject = MediaController.getInstance().getPlayingMessageObject();

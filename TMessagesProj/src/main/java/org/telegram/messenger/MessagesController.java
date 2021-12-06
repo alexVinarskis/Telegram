@@ -134,7 +134,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private int pollsToCheckSize;
     private long lastViewsCheckTime;
 
-    private LongSparseArray<ArrayList<MessageObject>> messageReactionsToCheck = new LongSparseArray<>();
+    private LongSparseArray<ArrayList<Integer>> messageReactionsToCheck = new LongSparseArray<>();
     private int messageReactionsToCheckSize;
     private long lastReactionsCheckTime;
 
@@ -2574,6 +2574,8 @@ public class MessagesController extends BaseController implements NotificationCe
         channelViewsToSend.clear();
         pollsToCheck.clear();
         pollsToCheckSize = 0;
+        messageReactionsToCheck.clear();
+        messageReactionsToCheckSize = 0;
         dialogsServerOnly.clear();
         dialogsForward.clear();
         allDialogs.clear();
@@ -5247,9 +5249,6 @@ public class MessagesController extends BaseController implements NotificationCe
         checkDeletingTask(false);
         checkReadTasks();
 
-        Log.e("DB", "Updater called!");
-
-
         if (getUserConfig().isClientActivated()) {
             if (!ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
@@ -5318,6 +5317,39 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         int currentServerTime = getConnectionsManager().getCurrentTime();
+        // dev alex - short polling reactions every 15 seconds
+        if (Math.abs(System.currentTimeMillis() - lastReactionsCheckTime) >= 15000) {
+            lastReactionsCheckTime = System.currentTimeMillis();
+            if (messageReactionsToCheckSize > 0) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    for (int a = 0, N = messageReactionsToCheck.size(); a < N; a++) {
+                        long dialogId = messageReactionsToCheck.keyAt(a);
+                        ArrayList<Integer> array = messageReactionsToCheck.valueAt(a);
+
+                        if (array == null) {
+                            continue;
+                        }
+
+                        TLRPC.TL_messages_getMessagesReactions req = new TLRPC.TL_messages_getMessagesReactions();
+                        req.peer = getInputPeer(dialogId);
+                        req.id = array;
+                        getConnectionsManager().sendRequest(req, (response, error) -> {
+                            if (error == null) {
+                                Log.e("DB", "Called update REACTIONS; size: " + ((TLRPC.Updates) response).updates.size());
+                                processUpdates((TLRPC.Updates) response, false);
+                            }
+                        });
+
+                        if (array.size() == 0) {
+                            messageReactionsToCheck.remove(messageReactionsToCheck.keyAt(a));
+                            N--;
+                            a--;
+                        }
+                    }
+                    messageReactionsToCheckSize = messageReactionsToCheck.size();
+                });
+            }
+        }
         if (Math.abs(System.currentTimeMillis() - lastViewsCheckTime) >= 5000) {
             lastViewsCheckTime = System.currentTimeMillis();
             if (channelViewsToSend.size() != 0) {
@@ -5377,7 +5409,6 @@ public class MessagesController extends BaseController implements NotificationCe
                 channelViewsToSend.clear();
             }
             if (pollsToCheckSize > 0) {
-                Log.e("DB", "Called update POLLS");
                 AndroidUtilities.runOnUIThread(() -> {
                     long time = SystemClock.elapsedRealtime();
                     int minExpireTime = Integer.MAX_VALUE;
@@ -8515,6 +8546,24 @@ public class MessagesController extends BaseController implements NotificationCe
         } else if (minExpireTime < 5) {
             lastViewsCheckTime = Math.min(lastViewsCheckTime, System.currentTimeMillis() - (5 - minExpireTime) * 1000);
         }
+    }
+    // dev alex - short polling reactions every 15 seconds
+    public void addToMessageReactionsQueue(long dialogId, ArrayList<MessageObject> visibleObjects) {
+        ArrayList<Integer> array = messageReactionsToCheck.get(dialogId);
+        if (array == null) {
+            array = new ArrayList<>();
+            messageReactionsToCheck.put(dialogId, array);
+            messageReactionsToCheckSize++;
+            // force update on dialog open
+            lastReactionsCheckTime = 0;
+        }
+        for (MessageObject messageObject : visibleObjects) {
+            if (messageObject.messageOwner.reactions != null) {
+                // only add ones that have any sort of reactions; as stated by rules
+                array.add(messageObject.getId());
+            }
+        }
+
     }
 
     public void markMessageContentAsRead(MessageObject messageObject) {

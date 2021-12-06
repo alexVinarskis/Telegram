@@ -2114,7 +2114,6 @@ public class MessageObject {
             return;
         }
         // Todo: finish implementing weird ass thing if MIN=true?
-        Log.e("DB", "updateReactions called! min: " + (reactions.min ? "true" : "false"));
         if (reactions.min && message.reactions != null) {
             for (int a = 0, N = message.reactions.results.size(); a < N; a++) {
                 TLRPC.TL_reactionCount reaction = message.reactions.results.get(a);
